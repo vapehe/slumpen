@@ -1,14 +1,32 @@
 ---
-description: Tauri 2 – commands, capabilities, plugins, webview/SPA
+description: Tauri 2 backend – commands, AppError, ingen panic/unwrap i IPC, domänmoduler
 globs: src-tauri/**/*
 alwaysApply: false
 ---
 
-# Tauri 2
+# Tauri 2 (backend)
 
-- Använd **Tauri 2**-mönster: `tauri::Builder`, `tauri::command`, `generate_context!()`.
-- **Commands**: `#[tauri::command]` i Rust; anropa från frontend med `@tauri-apps/api` / `@tauri-apps/plugin-*`. Validera indata i Rust där det påverkar säkerhet eller filsystem/DB.
-- **Capabilities & permissions**: nya förmågor ska deklareras i `src-tauri/capabilities/` (t.ex. `default.json`). Lägg till **minsta** behörighet som räcker (t.ex. `sql:allow-select` i stället för onödigt bred åtkomst).
-- **Plugins**: registrera i `lib.rs` med `.plugin(...)`; håll npm-paket (`@tauri-apps/*`) i linje med motsvarande Rust-crates.
-- **Frontend i webview**: SvelteKit körs som **statisk SPA**; ingen förlitlighet på en lokal Node-server. Använd Tauri **dialog** / **fs** (och liknande) när användaren valt sökvägar.
-- **IPC**: föredrag typer och små, tydliga commands framför otydliga strängprotokoll.
+## Commands och registrering
+
+- Varje `#[tauri::command]` ska **registreras** i [`src-tauri/src/lib.rs`](src-tauri/src/lib.rs) via `.invoke_handler(tauri::generate_handler![...])` tillsammans med alla andra commands (ingen “glömd” handler).
+- Gruppera kommandon efter **domän** i separata moduler (t.ex. under `src/commands/` eller `src-tauri/src/lottery/` …), så sökning och ansvar blir tydliga. För Slumpen, använd domäner i stil med: **`lottery`**, **`participants`**, **`draws`**, **`import`** (CSV), **`export`** (PDF/protokoll) — justera namn om kodbasen redan etablerat annat, men behåll en domän per område.
+
+## Fel: ingen panic och ingen `unwrap` i commands
+
+- **`#[tauri::command]` får inte** använda `panic!`, `unwrap()`, `expect()` eller andra sätt som kastar och avbryter exekveringen oväntat åt frontend. Användaren ska få ett **styrt** fel tillbaka via IPC.
+- Returnera **`Result<T, AppError>`** (eller `Result<T, String>` bara tillfälligt tills `AppError` finns). Interna fel (IO, SQL, parsing) ska **mappas** till `AppError`, inte propagera rå `unwrap`.
+
+## `AppError`
+
+- Definiera **en** serialiserbar feltyp (t.ex. `AppError`) med `serde::Serialize` (och ev. `thiserror`) så frontend kan visa **svenska** felmeddelanden baserat på kod/variant, medan loggning på Rust-sidan kan vara på **engelska** (se [logging.mdc](logging.mdc)).
+- Alla commands som misslyckas ska returnera `Err(AppError::...)` konsekvent, inte godtyckliga strängar spridda i koden.
+
+## SQL i Rust-kommandon
+
+- Om kommandon kör SQL direkt mot SQLite (inte bara via frontend-plugin): **endast prepared statements** / parameterbundna frågor — se [sqlite.mdc](sqlite.mdc).
+
+## Plattformar
+
+- Beteenden som **skiljer sig mellan OS** (dialogsökvägar, fil-URI:er, `open`-hantering, fönster/fullskärm): anta inte Linux-only; verifiera vid behov på **Linux, Windows, macOS** innan ni låser API-val.
+
+Övrigt (plugins, capabilities, SPA): oförändrade principer — minimal capability, registrera plugins i `lib.rs`, frontend som statisk SPA.

@@ -11,5 +11,6 @@ alwaysApply: false
 - **Databas-URL**: använd samma connection-sträng som i Rust, t.ex. `sqlite:app.db` (eller vad som står i `add_migrations` / `lib.rs`), så att migrationer och frontend laddar **samma** DB.
 - **Schemaändringar**: nya versioner i `src-tauri/migrations/` (numrerade), registrerade i `tauri_plugin_sql::Builder` med `MigrationKind::Up`. **Ändra inte** redan körda migrationer; lägg nya steg.
 - **Frontend** (`@tauri-apps/plugin-sql`): använd små, typade helpers i t.ex. `src/lib/db.ts`; platshållare enligt pluginets konventioner (`$1`, …); parameteriserade frågor mot injektion.
+- **Rust-kommandon** som kör SQL: **prepared statements / bundna parametrar** alltid — inga `format!`-SQL med användardata.
 - **Säkerhet**: inga sammanslagna råa SQL-strängar från oskyddad användarindata. Transaktioner vid flerstegs-skrivning där data måste vara konsekvent.
 - **Booleans** i SQLite: följ projektets mönster (t.ex. `0`/`1`); mappa till TypeScript-`boolean` i applikationsskiktet där det är definierat.

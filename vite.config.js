@@ -7,7 +7,9 @@ const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
-  plugins: [tailwindcss(), sveltekit()],
+  // sveltekit() must run before @tailwindcss/vite so Svelte virtual CSS modules
+  // are extracted before Tailwind parses them (otherwise raw .svelte hits the CSS parser).
+  plugins: [sveltekit(), tailwindcss()],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
