@@ -1,0 +1,17 @@
+---
+description: Projektgemensamma konventioner, språk (UI vs logg), TypeScript
+alwaysApply: true
+---
+
+# Kodkonventioner
+
+- **TypeScript**: strict mode; undvik `any` utan goda skäl; tydliga typer i publika API:er.
+- **Ny kod**: följ befintlig stil, namngivning och mappstruktur i samma modul. Undvik stora orelaterade refaktorer i samma ändring.
+- **Imports**: gruppera (extern, intern, relativa) som resten av projektet; använd `$lib` i Svelte-projektet där det är etablerat.
+- **Dokumentation**: korta kommentarer bara där orsak eller icke-uppen begränsning behövs; ingen lång prosa i uppenlig kod.
+- **TDD & tester**: arbeta enligt [test-driven-development.mdc](test-driven-development.mdc). Verktyg: **Vitest** (`pnpm test` / `pnpm test:run`).
+
+## Språk: UI vs loggning
+
+- **Användargränssnitt** (etiketter, knapptexter, tomma listor, info-/varnings-/felmexx): **svenska** (`sv-SE` för datum och tal där det är relevant). Se också [frontend-svelte.mdc](frontend-svelte.mdc).
+- **Loggning, `console`, utvecklarmeddelanden, tekniska fel i loggar**: **engelska** så sökning och delning av loggar blir enhetlig. Se [logging.mdc](logging.mdc).

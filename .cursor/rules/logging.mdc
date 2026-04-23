@@ -1,0 +1,12 @@
+---
+description: Loggning och konsol – engelska, struktur, inga användarfel
+globs: "src/**/*.{svelte,ts}"
+alwaysApply: false
+---
+
+# Loggning
+
+- **Språk**: `console.log` / `console.warn` / `console.error`, strukturerad loggning och felsökningstexter ska vara **engelska** (konsistens, sökning, delning av loggar). Detta gäller **inte** användarvisade meddelanden i UI – de ska vara **svenska** enligt [frontend-svelte.mdc](frontend-svelte.mdc) och [coding-conventions.mdc](coding-conventions.mdc).
+- **Känslig data**: logga **inte** lösenord, hemliga token eller fullständiga personuppgifter om det kan undvikas.
+- **Nivåer**: använd `warn` / `error` där något faktiskt gått fel; undvik stökiga `log` i tät loop i produktion.
+- **Rust (`src-tauri`)**: samma idé – logg- och felsökningssträngar på **engelska** med projektets loggrutin om en sådan införs (t.ex. `log` / `tracing`); användarriktad text som skickas till webben ska följa **svenska**-reglerna när det visas i gränssnittet.

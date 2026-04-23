@@ -1,0 +1,15 @@
+---
+description: SQLite via tauri-plugin-sql – DB-sökväg, migrationer, queries
+globs: src-tauri/**/*
+alwaysApply: false
+---
+
+# SQLite (tauri-plugin-sql)
+
+*Gäller också när du redigerar `src/lib/db.ts` och liknande DB-hjälpare på frontend, även om globen primärt fångar `src-tauri`.*
+
+- **Databas-URL**: använd samma connection-sträng som i Rust, t.ex. `sqlite:app.db` (eller vad som står i `add_migrations` / `lib.rs`), så att migrationer och frontend laddar **samma** DB.
+- **Schemaändringar**: nya versioner i `src-tauri/migrations/` (numrerade), registrerade i `tauri_plugin_sql::Builder` med `MigrationKind::Up`. **Ändra inte** redan körda migrationer; lägg nya steg.
+- **Frontend** (`@tauri-apps/plugin-sql`): använd små, typade helpers i t.ex. `src/lib/db.ts`; platshållare enligt pluginets konventioner (`$1`, …); parameteriserade frågor mot injektion.
+- **Säkerhet**: inga sammanslagna råa SQL-strängar från oskyddad användarindata. Transaktioner vid flerstegs-skrivning där data måste vara konsekvent.
+- **Booleans** i SQLite: följ projektets mönster (t.ex. `0`/`1`); mappa till TypeScript-`boolean` i applikationsskiktet där det är definierat.

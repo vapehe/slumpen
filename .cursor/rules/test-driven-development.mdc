@@ -1,0 +1,14 @@
+---
+description: TDD – röd-grön-refaktor, Vitest, inget produktionskod före misslyckat test
+alwaysApply: true
+---
+
+# Testdriven utveckling (TDD)
+
+- **Cyklo**: *röd* (skriv ett test som förväntas falla) → verifiera att felet är **meningsfullt** → *grön* (minsta kod som gör testet grönt) → *refaktor* (behåll grönt) → upprepa.
+- **Järnregel**: Lägg **inte in produktionskod** som saknar föregående rött test, om det inte hör till ett undantag nedan. Om du skrivit implementation först: ta bort den och börja om från test, annars vet du inte att testet fångar rätt beteende.
+- **Körning**: Använd **Vitest** (`vitest.config.ts` i roten). `pnpm test` (watch), `pnpm test:run` (en körning, t.ex. CI), `pnpm test:ui` (Vitest-UI). Kör testerna innan du anser en ändring klar, särskilt efter refaktor. Mer om scenario i fas 9 i [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md).
+- **Placering**: Enhetstester nära källan, t.ex. `src/lib/foo.test.ts` till `src/lib/foo.ts`, så som planen föreslår.
+- **Vad man testar först**: **Affärslogik** (t.ex. slump, CSV-parsning, dragning) i rena funktioner; **Svelte** – extrahera testbar logik till `$lib` där det är tungt, så TDD inte låser sig i enbart component harness.
+- **Undantag** (diskutera i chatten om osäkert): rena konfigurationsfiler, autogenererad kod, bortkastade prototyper. **UI-polish** utan beteendekrav kan kompletteras med manuell test; **nytt beteende** ska fortfarande börja med test om det går.
+- TDD ersätter inte **Tauri e2e**; kritiska flöden kan senare få egna integreringstest om projektet inför det.

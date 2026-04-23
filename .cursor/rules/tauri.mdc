@@ -1,0 +1,14 @@
+---
+description: Tauri 2 – commands, capabilities, plugins, webview/SPA
+globs: src-tauri/**/*
+alwaysApply: false
+---
+
+# Tauri 2
+
+- Använd **Tauri 2**-mönster: `tauri::Builder`, `tauri::command`, `generate_context!()`.
+- **Commands**: `#[tauri::command]` i Rust; anropa från frontend med `@tauri-apps/api` / `@tauri-apps/plugin-*`. Validera indata i Rust där det påverkar säkerhet eller filsystem/DB.
+- **Capabilities & permissions**: nya förmågor ska deklareras i `src-tauri/capabilities/` (t.ex. `default.json`). Lägg till **minsta** behörighet som räcker (t.ex. `sql:allow-select` i stället för onödigt bred åtkomst).
+- **Plugins**: registrera i `lib.rs` med `.plugin(...)`; håll npm-paket (`@tauri-apps/*`) i linje med motsvarande Rust-crates.
+- **Frontend i webview**: SvelteKit körs som **statisk SPA**; ingen förlitlighet på en lokal Node-server. Använd Tauri **dialog** / **fs** (och liknande) när användaren valt sökvägar.
+- **IPC**: föredrag typer och små, tydliga commands framför otydliga strängprotokoll.

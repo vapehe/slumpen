@@ -1,0 +1,15 @@
+---
+description: SvelteKit 2, Svelte 5, Tailwind 4, shadcn-svelte, svensk UI
+globs: "src/**/*.{svelte,ts,css}"
+alwaysApply: false
+---
+
+# Frontend (SvelteKit + Svelte 5 + Tailwind + shadcn-svelte)
+
+- **Användartext (obligatoriskt)**: all synlig text i UI – rubriker, etiketter, knappar, ledtexter, **informativa meddelanden, varningar och fel** som visas för användaren – ska vara på **svenska**. Formatera datum, tid och (vid behov) tal med **sv-SE**. Undvik hårdkodad engelska i nya vyer; befintlig engelska i mallfiler bör ersättas gradvis vid beröring.
+- **Tekniska strängar som inte syns** (t.ex. interna `data-`-värden, tekniska nycklar): engelska är ok där det är branschstandard.
+- **Svelte 5**: använd runes (`$state`, `$props`, `$derived`, …), `onclick` / moderna händelser, tydligt typade props-gränssnitt.
+- **SvelteKit**: appen byggs som **client-renderad statisk SPA** till Tauri (`adapter-static` med fallback, `ssr`/`prerender` enligt projektkonfig). Undvik beroende av server-only API:er i kärnflöden såvida de inte uttryckligen införs.
+- **TypeScript**: `lang="ts"` i `<script>`; strikta typer; importera från `$lib` där det är mönstret.
+- **Tailwind CSS 4**: en global entrepunkt med `@import "tailwindcss"`; föredrag **utility-klasser** framför mängder av egen global CSS, utom när rörlig layout kräver inline-stilar.
+- **shadcn-svelte**: nya komponenter ska genereras med projektets shadcn-CLI; **kopiera inte** byggda vendorfiler manuellt. Bygg vidare på befintliga primitiv; behåll tillgänglighet (fokus, etikett, tangentbord).
