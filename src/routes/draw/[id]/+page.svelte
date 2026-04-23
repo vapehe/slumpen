@@ -273,14 +273,20 @@
         <h2 class="mb-3 text-lg font-semibold text-neutral-900">Resultat</h2>
         <ol class="list-inside list-decimal space-y-2 rounded-lg border border-neutral-200 bg-white px-4 py-3">
           {#each data.draws as draw (draw.id)}
-            <li class="text-neutral-800">
-              <span class="font-medium">
-                {nameForParticipantId(draw.participant_id, data.participants, data.lottery.name_column)}
-              </span>
-              <span class="text-neutral-400">· deltagare #{draw.participant_id}</span>
+            <li class="font-medium text-neutral-800">
+              {nameForParticipantId(draw.participant_id, data.participants, data.lottery.name_column)}
             </li>
           {/each}
         </ol>
+        <p class="mt-4">
+          <a
+            href="/results/{data.lotteryId}"
+            class="font-semibold text-emerald-700 underline hover:text-emerald-800"
+          >
+            Resultat och PDF
+          </a>
+          <span class="text-sm text-neutral-600"> — visa protokoll och exportera PDF</span>
+        </p>
       </div>
     {:else if precomputed.length > 0 && currentWinnerRow}
       <!-- Aktiv dragning med animation -->
@@ -340,11 +346,8 @@
           <h2 class="mb-3 text-lg font-semibold text-neutral-900">Hittills dragna</h2>
           <ol class="list-inside list-decimal space-y-2 rounded-lg border border-neutral-200 bg-white px-4 py-3">
             {#each revealedRows as row (row.position)}
-              <li class="text-neutral-800">
-                <span class="font-medium">
-                  {nameForParticipantId(row.participantId, data.participants, data.lottery.name_column)}
-                </span>
-                <span class="text-neutral-400">· deltagare #{row.participantId}</span>
+              <li class="font-medium text-neutral-800">
+                {nameForParticipantId(row.participantId, data.participants, data.lottery.name_column)}
               </li>
             {/each}
           </ol>
