@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { save } from "@tauri-apps/plugin-dialog";
+  import { ask, save } from "@tauri-apps/plugin-dialog";
   import { writeFile } from "@tauri-apps/plugin-fs";
+  import { goto } from "$app/navigation";
   import { participantDisplayName } from "$lib/draw-reel";
-  import type { Draw, Participant } from "$lib/db";
+  import { deleteLottery, type Draw, type Participant } from "$lib/db";
   import { generateLotteryProtocol } from "$lib/pdf-generator";
   import type { PageProps } from "./$types";
 
@@ -11,6 +12,8 @@
   let isExporting = $state(false);
   let exportError = $state<string | null>(null);
   let exportSuccess = $state(false);
+  let isDeleting = $state(false);
+  let deleteError = $state<string | null>(null);
 
   let winnersList = $derived(
     !data.ok
@@ -61,6 +64,27 @@
       isExporting = false;
     }
   }
+
+  async function handleDeleteLottery(): Promise<void> {
+    if (!data.ok || isDeleting) return;
+
+    const confirmed = await ask(
+      `Vill du ta bort "${data.lottery.name}"?\n\nDetta raderar lotteriet samt all tillhörande data (deltagare och dragningar). Åtgärden kan inte ångras.`,
+      { title: "Ta bort lotteri", kind: "warning" },
+    );
+    if (!confirmed) return;
+
+    isDeleting = true;
+    deleteError = null;
+    try {
+      await deleteLottery(data.lotteryId);
+      await goto("/");
+    } catch (e) {
+      deleteError = e instanceof Error ? e.message : "Kunde inte ta bort lotteriet.";
+    } finally {
+      isDeleting = false;
+    }
+  }
 </script>
 
 <div class="mx-auto max-w-4xl px-6 py-10">
@@ -95,6 +119,12 @@
     {#if exportError}
       <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
         {exportError}
+      </div>
+    {/if}
+
+    {#if deleteError}
+      <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+        {deleteError}
       </div>
     {/if}
 
@@ -154,6 +184,15 @@
       >
         Till startsidan
       </a>
+
+      <button
+        type="button"
+        onclick={() => void handleDeleteLottery()}
+        disabled={isDeleting}
+        class="inline-flex justify-center rounded-lg border border-red-200 bg-red-50 px-6 py-3 font-semibold text-red-900 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {isDeleting ? "Tar bort…" : "Ta bort lotteri"}
+      </button>
     </div>
 
     <div class="mt-10 rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-800">

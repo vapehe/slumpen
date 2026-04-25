@@ -108,6 +108,11 @@ export async function getAllLotteries(): Promise<Lottery[]> {
   return rows.map(rowToLottery);
 }
 
+export async function deleteLottery(id: number): Promise<void> {
+  const database = await getDb();
+  await database.execute("DELETE FROM lotteries WHERE id = $1", [id]);
+}
+
 export async function getLotteryById(id: number): Promise<Lottery | null> {
   const database = await getDb();
   const results = await database.select<LotteryRow[]>(

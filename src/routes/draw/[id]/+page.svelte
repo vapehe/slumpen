@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { invalidateAll } from "$app/navigation";
+  import { goto } from "$app/navigation";
   import SlotReel from "$lib/components/SlotReel.svelte";
   import { saveDraws, type Participant } from "$lib/db";
   import { buildReelItems, participantDisplayName, reelForSpin, type ReelItem } from "$lib/draw-reel";
@@ -18,10 +18,18 @@
   let speedMs = $state(8000);
   let soundsEnabled = $state(true);
   let isSpinning = $state(false);
+  let isReelAnimating = $state(false);
   let actionError = $state<string | null>(null);
 
   /** Antal vinnare som redan är avslöjade (sparade i DB eller nyss dragna). */
   let revealedCount = $state(0);
+
+  /**
+   * Sätts efter att sista dragningen är klar och konfettin har körts.
+   * Används för att behålla "dragningsvyn" och visa CTA till resultatsidan.
+   */
+  let showPostDrawCta = $state(false);
+  let isCompletingFinalDraw = $state(false);
 
   let precomputed = $state<DrawRow[]>([]);
   let computeError = $state<string | null>(null);
@@ -118,14 +126,15 @@
     void playTick();
   }
 
-  function fireConfetti(): void {
+  async function fireConfetti(): Promise<void> {
     try {
-      confetti({
+      const p = confetti({
         particleCount: 180,
         spread: 90,
         startVelocity: 55,
         origin: { y: 0.5 },
       });
+      if (p) await p;
     } catch (e) {
       console.warn("confetti failed", e);
     }
@@ -141,27 +150,40 @@
 
     actionError = null;
     isSpinning = true;
+    isReelAnimating = true;
     slotReel?.spin();
   }
 
   async function handleDrawComplete(): Promise<void> {
     if (!data.ok) return;
+    isReelAnimating = false;
 
     const row = precomputed[revealedCount];
     try {
       await saveDraws(data.lotteryId, [row]);
       revealedCount += 1;
+      const finalDrawComplete = revealedCount >= precomputed.length;
+      if (finalDrawComplete) {
+        isCompletingFinalDraw = true;
+      }
       if (soundsEnabled) void playFanfare();
-      fireConfetti();
+      await fireConfetti();
 
-      if (revealedCount >= precomputed.length) {
-        await invalidateAll();
+      if (finalDrawComplete) {
+        isCompletingFinalDraw = false;
+        showPostDrawCta = true;
       }
     } catch (e) {
+      isCompletingFinalDraw = false;
       actionError = messageFromTauriInvokeError(e);
     } finally {
       isSpinning = false;
     }
+  }
+
+  async function goToResultsPage(): Promise<void> {
+    if (!data.ok) return;
+    await goto(`/results/${data.lotteryId}`);
   }
 
   let isComplete = $derived(data.ok && revealedCount >= data.lottery.num_draws);
@@ -267,7 +289,7 @@
       <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
         Det finns inga deltagare för detta lotteri.
       </div>
-    {:else if isComplete}
+    {:else if isComplete && !isCompletingFinalDraw && !showPostDrawCta}
       <!-- Alla vinnare dragna – statisk resultatvy. -->
       <div class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
         Alla {data.lottery.num_draws} vinnare är dragna och sparade.
@@ -291,17 +313,23 @@
           <span class="text-sm text-neutral-600"> — visa protokoll och exportera PDF</span>
         </p>
       </div>
-    {:else if precomputed.length > 0 && currentWinnerRow}
+    {:else if precomputed.length > 0 && (currentWinnerRow || isCompletingFinalDraw || showPostDrawCta)}
       <!-- Aktiv dragning med animation -->
-      <div class="mb-4 flex items-baseline justify-between">
-        <p class="text-sm font-medium text-neutral-700">
-          Vinnare <span class="text-lg font-bold text-neutral-900">{revealedCount + 1}</span>
-          av <span class="font-semibold">{data.lottery.num_draws}</span>
-        </p>
-        <p class="text-xs text-neutral-500">
-          {computeReelItems().length} möjliga utfall på rullen
-        </p>
-      </div>
+      {#if showPostDrawCta}
+        <div class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          Alla {data.lottery.num_draws} vinnare är dragna och sparade.
+        </div>
+      {:else}
+        <div class="mb-4 flex items-baseline justify-between">
+          <p class="text-sm font-medium text-neutral-700">
+            Vinnare <span class="text-lg font-bold text-neutral-900">{revealedCount + 1}</span>
+            av <span class="font-semibold">{data.lottery.num_draws}</span>
+          </p>
+          <p class="text-xs text-neutral-500">
+            {computeReelItems().length} möjliga utfall på rullen
+          </p>
+        </div>
+      {/if}
 
       <SlotReel
         bind:this={slotReel}
@@ -313,35 +341,47 @@
       />
 
       <div class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <label class="flex items-center gap-3 text-sm text-neutral-700">
-          <span class="min-w-40">
-            Snurrtid: <span class="font-semibold text-neutral-900">{(speedMs / 1000).toFixed(0)} s</span>
-          </span>
-          <input
-            type="range"
-            min="3000"
-            max="20000"
-            step="500"
-            bind:value={speedMs}
-            disabled={isSpinning}
-            class="flex-1"
-          />
-        </label>
+        {#if showPostDrawCta}
+          <button
+            type="button"
+            onclick={() => {
+              void goToResultsPage();
+            }}
+            class="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-8 py-4 text-lg font-bold text-white shadow-md hover:bg-emerald-800"
+          >
+            Till resultat
+          </button>
+        {:else}
+          <label class="flex items-center gap-3 text-sm text-neutral-700">
+            <span class="min-w-40">
+              Snurrtid: <span class="font-semibold text-neutral-900">{(speedMs / 1000).toFixed(0)} s</span>
+            </span>
+            <input
+              type="range"
+              min="3000"
+              max="20000"
+              step="500"
+              bind:value={speedMs}
+              disabled={isSpinning}
+              class="flex-1"
+            />
+          </label>
 
-        <button
-          type="button"
-          onclick={() => startSpin()}
-          disabled={isSpinning}
-          class="rounded-xl bg-emerald-700 px-8 py-4 text-lg font-bold text-white shadow-md hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {#if isSpinning}
-            Snurrar…
-          {:else if revealedCount === 0}
-            Starta dragning
-          {:else}
-            Dra vinnare {revealedCount + 1}
-          {/if}
-        </button>
+          <button
+            type="button"
+            onclick={() => startSpin()}
+            disabled={isSpinning}
+            class="rounded-xl bg-emerald-700 px-8 py-4 text-lg font-bold text-white shadow-md hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {#if isReelAnimating}
+              Snurrar…
+            {:else if revealedCount === 0}
+              Starta dragning
+            {:else}
+              Dra vinnare {revealedCount + 1}
+            {/if}
+          </button>
+        {/if}
       </div>
 
       {#if revealedRows.length > 0}

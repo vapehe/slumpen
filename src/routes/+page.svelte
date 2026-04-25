@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { getAllLotteries, type Lottery } from "$lib/db";
+  import { ask } from "@tauri-apps/plugin-dialog";
+  import { deleteLottery, getAllLotteries, type Lottery } from "$lib/db";
 
   let lotteries = $state<Lottery[]>([]);
   let isLoading = $state(true);
   let loadError = $state<string | null>(null);
+  let deletingId = $state<number | null>(null);
 
   async function loadLotteries(): Promise<void> {
     isLoading = true;
@@ -22,6 +24,27 @@
   onMount(() => {
     void loadLotteries();
   });
+
+  async function confirmAndDelete(lottery: Lottery): Promise<void> {
+    if (deletingId != null) return;
+
+    const confirmed = await ask(
+      `Vill du ta bort "${lottery.name}"?\n\nDetta raderar lotteriet samt all tillhörande data (deltagare och dragningar). Åtgärden kan inte ångras.`,
+      { title: "Ta bort lotteri", kind: "warning" },
+    );
+    if (!confirmed) return;
+
+    deletingId = lottery.id;
+    loadError = null;
+    try {
+      await deleteLottery(lottery.id);
+      await loadLotteries();
+    } catch (e) {
+      loadError = e instanceof Error ? e.message : "Kunde inte ta bort lotteriet.";
+    } finally {
+      deletingId = null;
+    }
+  }
 </script>
 
 <div class="mx-auto max-w-5xl px-6 py-10">
@@ -74,26 +97,43 @@
     <ul class="space-y-4">
       {#each lotteries as lottery (lottery.id)}
         <li>
-          <a
-            href="/results/{lottery.id}"
-            class="block rounded-lg border border-neutral-200 bg-white p-5 transition-shadow hover:shadow-md"
-          >
-            <h3 class="mb-1 text-xl font-semibold text-neutral-900">{lottery.name}</h3>
-            {#if lottery.description}
-              <p class="mb-2 text-sm text-neutral-600">{lottery.description}</p>
-            {/if}
-            <div class="flex flex-wrap gap-x-6 gap-y-1 text-sm text-neutral-500">
-              <span>
-                Skapat {new Date(lottery.created_at).toLocaleDateString("sv-SE", {
-                  dateStyle: "medium",
-                })}
-              </span>
-              <span>
-                {lottery.num_draws === 1 ? "1 vinnare" : `${lottery.num_draws} vinnare`}
-              </span>
-              <span>{lottery.with_replacement ? "Med återläggning" : "Utan återläggning"}</span>
+          <div class="rounded-lg border border-neutral-200 bg-white p-5 transition-shadow hover:shadow-md">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <a href="/results/{lottery.id}" class="block min-w-0 flex-1">
+                <h3 class="mb-1 text-xl font-semibold text-neutral-900">{lottery.name}</h3>
+                {#if lottery.description}
+                  <p class="mb-2 text-sm text-neutral-600">{lottery.description}</p>
+                {/if}
+                <div class="flex flex-wrap gap-x-6 gap-y-1 text-sm text-neutral-500">
+                  <span>
+                    Skapat {new Date(lottery.created_at).toLocaleDateString("sv-SE", {
+                      dateStyle: "medium",
+                    })}
+                  </span>
+                  <span>
+                    {lottery.num_draws === 1 ? "1 vinnare" : `${lottery.num_draws} vinnare`}
+                  </span>
+                  <span>{lottery.with_replacement ? "Med återläggning" : "Utan återläggning"}</span>
+                </div>
+              </a>
+
+              <div class="shrink-0">
+                <button
+                  type="button"
+                  class="inline-flex justify-center rounded-lg border border-red-200 bg-red-50 px-4 py-2 font-semibold text-red-900 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={deletingId === lottery.id}
+                  aria-label={`Ta bort lotteri: ${lottery.name}`}
+                  onclick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    void confirmAndDelete(lottery);
+                  }}
+                >
+                  {deletingId === lottery.id ? "Tar bort…" : "Ta bort"}
+                </button>
+              </div>
             </div>
-          </a>
+          </div>
         </li>
       {/each}
     </ul>
