@@ -79,7 +79,7 @@
       isLoading = true;
       error = null;
 
-      const seed = generateSeed();
+      const seed = await generateSeed();
       const desc = description.trim();
       const lotteryId = await createLottery(
         validation.displayName,

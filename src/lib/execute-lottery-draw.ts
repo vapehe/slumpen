@@ -1,9 +1,12 @@
 import type { Lottery, Participant } from "./db";
-import { drawWithReplacement, drawWithoutReplacement } from "./random";
+import { drawWinners } from "./random";
 
 export type DrawRow = { position: number; participantId: number };
 
-export function computeLotteryDrawRows(lottery: Lottery, participants: Participant[]): DrawRow[] {
+export async function computeLotteryDrawRows(
+  lottery: Lottery,
+  participants: Participant[],
+): Promise<DrawRow[]> {
   if (!lottery.seed) {
     throw new Error("Lotteriet saknar slumpseed; dragning kan inte reproduceras.");
   }
@@ -13,12 +16,11 @@ export function computeLotteryDrawRows(lottery: Lottery, participants: Participa
 
   const seed = lottery.seed;
   const n = lottery.num_draws;
-  const winners = lottery.with_replacement
-    ? drawWithReplacement(participants, n, seed)
-    : drawWithoutReplacement(participants, n, seed);
+  const participantIds = participants.map((p) => p.id);
+  const winnerIds = await drawWinners(participantIds, n, lottery.with_replacement, seed);
 
-  return winners.map((p, index) => ({
+  return winnerIds.map((participantId, index) => ({
     position: index + 1,
-    participantId: p.id,
+    participantId,
   }));
 }

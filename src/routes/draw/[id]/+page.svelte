@@ -36,16 +36,18 @@
 
   onMount(() => {
     if (!data.ok) return;
-    try {
-      precomputed = computeLotteryDrawRows(data.lottery, data.participants);
-      revealedCount = data.draws.length;
-      if (revealedCount < precomputed.length) {
-        reelItems = computeReelItems();
-        reelWinnerId = precomputed[revealedCount].participantId;
+    void (async () => {
+      try {
+        precomputed = await computeLotteryDrawRows(data.lottery, data.participants);
+        revealedCount = data.draws.length;
+        if (revealedCount < precomputed.length) {
+          reelItems = computeReelItems();
+          reelWinnerId = precomputed[revealedCount].participantId;
+        }
+      } catch (e) {
+        computeError = e instanceof Error ? e.message : "Kunde inte förbereda dragningen.";
       }
-    } catch (e) {
-      computeError = e instanceof Error ? e.message : "Kunde inte förbereda dragningen.";
-    }
+    })();
 
     void syncFullscreenState();
 
