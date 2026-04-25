@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeTauri } from "$lib/tauri-error";
 
 export interface RandomnessReport {
   chi_square_stat: number;
@@ -18,6 +18,6 @@ export async function runRandomnessTests(
   minVal: number,
   maxVal: number,
 ): Promise<RandomnessReport> {
-  return invoke("run_randomness_tests", { draws, min_val: minVal, max_val: maxVal });
+  return invokeTauri("run_randomness_tests", { draws, minVal, maxVal });
 }
 

@@ -31,9 +31,9 @@ describe("random IPC wrappers", () => {
       invokeMock.mockResolvedValueOnce([3, 1]);
       await expect(drawWinners([1, 2, 3], 2, false, "seed")).resolves.toEqual([3, 1]);
       expect(invokeMock).toHaveBeenCalledWith("draw_winners", {
-        participant_ids: [1, 2, 3],
-        num_draws: 2,
-        with_replacement: false,
+        participantIds: [1, 2, 3],
+        numDraws: 2,
+        withReplacement: false,
         seed: "seed",
       });
     });
@@ -44,8 +44,8 @@ describe("random IPC wrappers", () => {
       invokeMock.mockResolvedValueOnce([1, 2, 1]);
       await expect(simulateSyntheticDraws(10, 3, "seed")).resolves.toEqual([1, 2, 1]);
       expect(invokeMock).toHaveBeenCalledWith("simulate_synthetic_draws", {
-        num_outcomes: 10,
-        sample_size: 3,
+        numOutcomes: 10,
+        sampleSize: 3,
         seed: "seed",
       });
     });

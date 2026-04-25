@@ -4,6 +4,7 @@
   import { saveDraws, type Participant } from "$lib/db";
   import { buildReelItems, participantDisplayName, reelForSpin, type ReelItem } from "$lib/draw-reel";
   import { computeLotteryDrawRows, type DrawRow } from "$lib/execute-lottery-draw";
+  import { messageFromTauriInvokeError } from "$lib/tauri-error";
   import { isFullscreen as readFullscreen, setFullscreen } from "$lib/fullscreen";
   import { closeAudio, playFanfare, playTick } from "$lib/sounds";
   import confetti from "canvas-confetti";
@@ -45,7 +46,7 @@
           reelWinnerId = precomputed[revealedCount].participantId;
         }
       } catch (e) {
-        computeError = e instanceof Error ? e.message : "Kunde inte förbereda dragningen.";
+        computeError = messageFromTauriInvokeError(e);
       }
     })();
 
@@ -157,7 +158,7 @@
         await invalidateAll();
       }
     } catch (e) {
-      actionError = e instanceof Error ? e.message : "Kunde inte spara dragning.";
+      actionError = messageFromTauriInvokeError(e);
     } finally {
       isSpinning = false;
     }
