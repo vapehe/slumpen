@@ -96,6 +96,59 @@ mod tests {
     }
 
     #[test]
+    fn draw_without_replacement_is_deterministic_per_seed_large_pool() {
+        let seed = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        let pool: Vec<i32> = (1..=216).collect();
+
+        let a = draw_without_replacement(&pool, 3, seed).unwrap();
+        let b = draw_without_replacement(&pool, 3, seed).unwrap();
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn draw_without_replacement_uses_seed_for_large_pool() {
+        let seed_a = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        let seed_b = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        let pool: Vec<i32> = (1..=216).collect();
+
+        let a = draw_without_replacement(&pool, 3, seed_a).unwrap();
+        let b = draw_without_replacement(&pool, 3, seed_b).unwrap();
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn draw_without_replacement_is_not_biased_to_pool_start_for_large_pool() {
+        let pool: Vec<i32> = (1..=216).collect();
+        let expected = vec![1, 2, 3];
+
+        let seeds = [
+            "0000000000000000000000000000000000000000000000000000000000000000",
+            "1111111111111111111111111111111111111111111111111111111111111111",
+            "2222222222222222222222222222222222222222222222222222222222222222",
+            "3333333333333333333333333333333333333333333333333333333333333333",
+            "4444444444444444444444444444444444444444444444444444444444444444",
+            "5555555555555555555555555555555555555555555555555555555555555555",
+            "6666666666666666666666666666666666666666666666666666666666666666",
+            "7777777777777777777777777777777777777777777777777777777777777777",
+            "8888888888888888888888888888888888888888888888888888888888888888",
+            "9999999999999999999999999999999999999999999999999999999999999999",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        ];
+
+        let all_are_start = seeds
+            .iter()
+            .map(|seed| draw_without_replacement(&pool, 3, seed).unwrap())
+            .all(|winners| winners == expected);
+
+        assert!(!all_are_start);
+    }
+
+    #[test]
     fn draw_with_replacement_allows_duplicates_and_validates_pool() {
         let seed = "4444444444444444444444444444444444444444444444444444444444444444";
         let pool = vec![1, 2];
@@ -175,9 +228,12 @@ pub fn draw_without_replacement<T: Clone>(
     }
     let mut rng = rng_from_hex(seed_hex)?;
     let mut out = pool.to_vec();
-    // Faster than full shuffle when n << len, but still deterministic.
+    let m = out.len() - n;
+    // partial_shuffle moves the randomly selected elements to the END of the
+    // slice; the first `m` elements stay (almost entirely) untouched, so we
+    // must drop them and keep the tail.
     out.partial_shuffle(&mut rng, n);
-    out.truncate(n);
+    out.drain(..m);
     Ok(out)
 }
 
