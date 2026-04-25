@@ -10,6 +10,8 @@
   import TestHistory from "$lib/randomness/components/TestHistory.svelte";
 
   let report = $state<RandomnessReport | null>(null);
+  /** Nyckel så FrequencyChart monteras om vid varje körning (Chart.js + Svelte use:). */
+  let chartMountKey = $state(0);
   let history = $state<RandomnessTestRow[]>([]);
   let loading = $state(false);
   let error = $state<string | null>(null);
@@ -36,6 +38,7 @@
       const draws = await simulateSyntheticDraws(args.numOutcomes, args.sampleSize, seed);
       const r = await runRandomnessTests(draws, 1, args.numOutcomes);
       report = r;
+      chartMountKey += 1;
       await saveReport(r, "synthetic", 1, args.numOutcomes, `seed=${seed}`);
       await loadHistory();
     } catch (e) {
@@ -74,7 +77,9 @@
   {#if report}
     <VerdictBanner overallPassed={report.overall_passed} sampleSize={report.sample_size} />
     <MetricCards {report} />
-    <FrequencyChart frequency={report.frequency} minVal={1} />
+    {#key chartMountKey}
+      <FrequencyChart frequency={report.frequency} minVal={1} />
+    {/key}
   {/if}
 
   <TestHistory rows={history} />

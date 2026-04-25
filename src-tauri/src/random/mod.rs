@@ -152,7 +152,8 @@ pub fn rng_from_hex(seed_hex: &str) -> Result<ChaCha20Rng, AppError> {
     Ok(ChaCha20Rng::from_seed(bytes))
 }
 
-pub fn shuffle_with_seed<T: Clone>(items: &[T], seed_hex: &str) -> Result<Vec<T>, AppError> {
+#[cfg(test)]
+fn shuffle_with_seed<T: Clone>(items: &[T], seed_hex: &str) -> Result<Vec<T>, AppError> {
     let mut rng = rng_from_hex(seed_hex)?;
     let mut out = items.to_vec();
     out.shuffle(&mut rng);

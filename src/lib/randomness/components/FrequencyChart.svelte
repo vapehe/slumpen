@@ -1,59 +1,17 @@
 <script lang="ts">
-  import { onDestroy } from "svelte";
-  import { Chart, registerables, type ChartConfiguration } from "chart.js";
-  Chart.register(...registerables);
+  import { frequencyBarChart } from "$lib/randomness/frequency-bar-chart";
 
   let { frequency, minVal }: { frequency: number[]; minVal: number } = $props();
-
-  let canvas: HTMLCanvasElement | null = null;
-  let chart: Chart | null = null;
-
-  function render(): void {
-    if (!canvas) return;
-    chart?.destroy();
-
-    const labels = frequency.map((_, i) => String(minVal + i));
-    const config: ChartConfiguration<"bar"> = {
-      type: "bar",
-      data: {
-        labels,
-        datasets: [
-          {
-            label: "Frekvens",
-            data: frequency,
-            backgroundColor: "rgba(16, 185, 129, 0.6)", // emerald-ish
-            borderColor: "rgba(16, 185, 129, 1)",
-            borderWidth: 1,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true,
-          },
-        },
-        plugins: {
-          legend: { display: false },
-        },
-      },
-    };
-
-    chart = new Chart(canvas, config);
-  }
-
-  $effect(() => {
-    frequency;
-    minVal;
-    render();
-  });
-
-  onDestroy(() => chart?.destroy());
 </script>
 
-<div class="relative h-56 rounded-lg border border-neutral-200 bg-white p-3">
-  <canvas bind:this={canvas} aria-label="Frekvensfördelning"></canvas>
+<div
+  class="relative h-56 w-full min-w-0 overflow-hidden rounded-lg border border-neutral-200 bg-white"
+>
+  <div class="absolute inset-3 box-border min-h-0 min-w-0">
+    <canvas
+      class="block h-full w-full min-h-px min-w-px"
+      aria-label="Frekvensfördelning"
+      use:frequencyBarChart={{ frequency, minVal }}
+    ></canvas>
+  </div>
 </div>
-
