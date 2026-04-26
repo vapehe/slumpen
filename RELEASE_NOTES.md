@@ -9,22 +9,30 @@ Första stabila utgåvan för skrivbord (Windows och Linux).
 
 ## Vilken fil ska jag ladda ner?
 
+**Tips:** På [Slumpen · Releases](https://github.com/vapehe/slumpen/releases) ser du exakt **vilka filer som ligger som bilagor** på varje version. Här är vad filnamnen betyder när de dyker upp där.
+
 ### Windows
 
-- **`Slumpen_1.0.0_x64-setup.exe`** (NSIS) – rekommenderas för de flesta användare; dubbelklicka och följ guiden.
-- **`Slumpen_1.0.0_x64_en-US.msi`** (WiX) – lämpligare om IT/admin ska rulla ut paketet (t.ex. Intune/GPO).
+De byggs endast på en Windows-maskin; de kan alltså **saknas** i releasen tills någon laddat upp dem.
 
-Windows-artefakter läggs upp på samma GitHub Release när de byggts på en Windows-maskin (se `docs/release-windows-manual.md` i repot).
+När (eller om) de finns i releasen är detta förväntade filnamn:
+
+- **`Slumpen_1.0.0_x64-setup.exe`** (NSIS) – rekommenderas för de flesta; dubbelklicka och följ guiden.
+- **`Slumpen_1.0.0_x64_en-US.msi`** (WiX) – ofta bättre om IT ska rulla ut (t.ex. Intune/GPO).
+
+**Saknas Windows-filerna?** Bygg från källkod enligt [`docs/release-windows-manual.md`](https://github.com/vapehe/slumpen/blob/v1.0.0/docs/release-windows-manual.md) i repot, eller använd Linux-paket om du bara kör Linux.
 
 ### Linux
 
-- **`.AppImage`** – om du inte vet om du kör Debian eller Fedora: en fil, gör den körbar (`chmod +x …`) och starta. Fungerar på många x86_64-distributioner.
+Kontrollera att motsvarande fil finns under releasen innan du laddar ner.
+
+- **`.AppImage`** (`Slumpen_1.0.0_amd64.AppImage`) – osäker på Debian vs Fedora: en fil, `chmod +x …`, starta. Fungerar på många x86_64-distributioner.
 - **`.deb`** – Debian, Ubuntu, Mint m.fl.: `sudo apt install ./Slumpen_1.0.0_amd64.deb`
-- **`.rpm`** – Fedora, openSUSE, RHEL m.fl.: `sudo dnf install ./Slumpen-1.0.0-1.x86_64.rpm` (eller motsvarande kommando för din distro)
+- **`.rpm`** – Fedora, openSUSE, RHEL m.fl.: `sudo dnf install ./Slumpen-1.0.0-1.x86_64.rpm` (eller motsvarande för din distribution)
 
 ## SmartScreen (Windows, osignerad build)
 
-Installern är **inte kodsignerad** i denna release. Windows kan visa *”Windows skyddade din dator”* eller liknande.
+Gäller när du installerar **Windows-versionen** ovan. Installern är **inte kodsignerad** i denna release. Windows kan visa *”Windows skyddade din dator”* eller liknande.
 
 1. Klicka på **Mer information** / **More info**.
 2. Välj **Kör ändå** / **Run anyway**.
@@ -52,14 +60,14 @@ På Linux: `sha256sum -c` mot en fil med ovanstående rader (filnamn i samma kat
 
 ### Windows
 
-Kör efter att du laddat ner `.exe` och `.msi` från GitHub Release:
+**När** `.exe` och `.msi` finns i releasen kan du verifiera dem så här efter nedladdning:
 
 ```powershell
 Get-FileHash -Algorithm SHA256 .\Slumpen_1.0.0_x64-setup.exe
 Get-FileHash -Algorithm SHA256 .\Slumpen_1.0.0_x64_en-US.msi
 ```
 
-Jämför med värden som publiceras i release-inlägget när Windows-filerna är uppladdade.
+Jämför med **SHA-256 som listas i release-inlägget** (läggs till när Windows-artefakterna publiceras). Om filerna saknas i releasen finns inget att jämföra mot här.
 
 ## Källkod
 
