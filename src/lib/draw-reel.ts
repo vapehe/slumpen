@@ -8,6 +8,13 @@ export interface ReelItem {
 const MISSING = "(saknas)";
 const MALFORMED = "(felaktig rad)";
 
+const nameCollator = new Intl.Collator("sv-SE");
+
+/** Sort reel rows by visible name (sv-SE). Does not mutate `items`. */
+function sortReelItemsByName(items: ReelItem[]): ReelItem[] {
+  return [...items].sort((a, b) => nameCollator.compare(a.name, b.name));
+}
+
 export function participantDisplayName(participant: Participant, nameColumn: string): string {
   try {
     const obj = JSON.parse(participant.data_json) as Record<string, unknown>;
@@ -20,10 +27,11 @@ export function participantDisplayName(participant: Participant, nameColumn: str
 }
 
 export function buildReelItems(participants: Participant[], nameColumn: string): ReelItem[] {
-  return participants.map((p) => ({
+  const mapped = participants.map((p) => ({
     id: p.id,
     name: participantDisplayName(p, nameColumn),
   }));
+  return sortReelItemsByName(mapped);
 }
 
 export function reelForSpin(

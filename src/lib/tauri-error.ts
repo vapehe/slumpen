@@ -1,5 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 
+/** Swedish UI fallback when `messageFromTauriInvokeError` cannot extract a message. */
+export const GENERIC_USER_FACING_ERROR = "Okänt fel från programmet.";
+
 /**
  * Tauri 2 `invoke` rejects with structured JSON for Rust `Serialize` errors, not `Error` instances.
  * Normalize so catch blocks and UI can use `.message` consistently.
@@ -20,7 +23,13 @@ export function messageFromTauriInvokeError(e: unknown): string {
       }
     }
   }
-  return "Okänt fel från programmet.";
+  return GENERIC_USER_FACING_ERROR;
+}
+
+/** Like `messageFromTauriInvokeError`, but uses `fallback` when no concrete message exists (UI copy). */
+export function userFacingErrorMessage(e: unknown, fallback: string): string {
+  const m = messageFromTauriInvokeError(e);
+  return m === GENERIC_USER_FACING_ERROR ? fallback : m;
 }
 
 /** Wraps `invoke` and throws `Error` with a readable `message` for all failure shapes. */

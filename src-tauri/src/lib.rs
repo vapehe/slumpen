@@ -8,11 +8,6 @@ mod randomness;
 use error::AppError;
 
 #[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
-#[tauri::command]
 fn generate_seed() -> Result<String, AppError> {
     let seed = random::generate_seed_bytes()?;
     Ok(random::seed_to_hex(&seed))
@@ -84,7 +79,6 @@ pub fn run() {
                 .build(),
         )
         .invoke_handler(tauri::generate_handler![
-            greet,
             generate_seed,
             draw_winners,
             simulate_synthetic_draws,

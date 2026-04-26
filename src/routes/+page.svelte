@@ -3,6 +3,7 @@
   import { ask } from "@tauri-apps/plugin-dialog";
   import { deleteLottery, getAllLotteries, type Lottery } from "$lib/db";
   import { formatDateSv } from "$lib/format-swedish-time";
+  import { userFacingErrorMessage } from "$lib/tauri-error";
 
   let lotteries = $state<Lottery[]>([]);
   let isLoading = $state(true);
@@ -15,7 +16,7 @@
     try {
       lotteries = await getAllLotteries();
     } catch (e) {
-      loadError = e instanceof Error ? e.message : "Kunde inte läsa lotterier.";
+      loadError = userFacingErrorMessage(e, "Kunde inte läsa lotterier.");
       lotteries = [];
     } finally {
       isLoading = false;
@@ -41,7 +42,7 @@
       await deleteLottery(lottery.id);
       await loadLotteries();
     } catch (e) {
-      loadError = e instanceof Error ? e.message : "Kunde inte ta bort lotteriet.";
+      loadError = userFacingErrorMessage(e, "Kunde inte ta bort lotteriet.");
     } finally {
       deletingId = null;
     }

@@ -1,6 +1,9 @@
 <script lang="ts">
   import type { ParsedCSV } from "$lib/csv-parser";
   import { detectDuplicates } from "$lib/csv-parser";
+  import { sortRowsByFirstColumn } from "$lib/csv-preview-sort";
+
+  const PREVIEW_COLLAPSED_ROWS = 5;
 
   interface Props {
     parsedData: ParsedCSV;
@@ -14,13 +17,30 @@
     onColumnSelect,
   }: Props = $props();
 
+  let showAllPreview = $state(false);
+
+  $effect(() => {
+    void parsedData;
+    showAllPreview = false;
+  });
+
   let duplicateInfo = $derived(
     selectedNameColumn
       ? detectDuplicates(parsedData.data, selectedNameColumn)
       : null,
   );
 
-  let previewRows = $derived(parsedData.data.slice(0, 10));
+  let sortedPreviewRows = $derived(
+    sortRowsByFirstColumn(parsedData.data, parsedData.columns[0] ?? ""),
+  );
+
+  let previewRows = $derived(
+    showAllPreview
+      ? sortedPreviewRows
+      : sortedPreviewRows.slice(0, PREVIEW_COLLAPSED_ROWS),
+  );
+
+  let canTogglePreviewLength = $derived(parsedData.data.length > PREVIEW_COLLAPSED_ROWS);
 
   function handleColumnChange(event: Event) {
     const value = (event.currentTarget as HTMLSelectElement).value;
@@ -41,7 +61,7 @@
 
   <div>
     <label class="mb-2 block font-medium" for="csv-name-column">
-      Vilken kolumn innehåller deltagarens namn?
+      Vilken kolumn innehåller deltagarens namn/ID?
     </label>
     <select
       id="csv-name-column"
@@ -73,7 +93,15 @@
   {/if}
 
   <div class="overflow-x-auto">
-    <p class="mb-2 text-sm text-neutral-600">Förhandsgranskning (första 10 raderna):</p>
+    <p class="mb-2 text-sm text-neutral-600">
+      Förhandsgranskning, sorterad alfabetiskt efter kolumnen
+      <span class="font-medium text-neutral-800">{parsedData.columns[0] ?? ""}.</span>
+      {#if canTogglePreviewLength && !showAllPreview}
+        Visar de fem första raderna.
+      {:else if canTogglePreviewLength && showAllPreview}
+        Visar alla rader.
+      {/if}
+    </p>
     <table class="min-w-full border border-neutral-300">
       <thead class="bg-neutral-50">
         <tr>
@@ -92,12 +120,26 @@
         {/each}
       </tbody>
     </table>
-    {#if parsedData.data.length > 10}
-      {@const remaining = parsedData.data.length - 10}
-      <p class="mt-2 text-sm text-neutral-500">
-        … och {remaining}
-        {remaining === 1 ? " rad till" : " rader till"}
-      </p>
+    {#if canTogglePreviewLength && !showAllPreview}
+      <button
+        type="button"
+        onclick={() => {
+          showAllPreview = true;
+        }}
+        class="mt-3 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
+      >
+        Visa alla
+      </button>
+    {:else if canTogglePreviewLength && showAllPreview}
+      <button
+        type="button"
+        onclick={() => {
+          showAllPreview = false;
+        }}
+        class="mt-3 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
+      >
+        Visa mindre
+      </button>
     {/if}
   </div>
 

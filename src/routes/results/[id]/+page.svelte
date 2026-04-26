@@ -5,7 +5,7 @@
   import { participantDisplayName } from "$lib/draw-reel";
   import { deleteLottery, type Draw, type Participant } from "$lib/db";
   import { generateLotteryProtocol } from "$lib/pdf-generator";
-  import { messageFromTauriInvokeError } from "$lib/tauri-error";
+  import { userFacingErrorMessage } from "$lib/tauri-error";
   import { formatDateTimeSv } from "$lib/format-swedish-time";
   import { verifyLotteryDraw, type VerificationResult } from "$lib/verify-lottery-draw";
   import type { PageProps } from "./$types";
@@ -65,7 +65,7 @@
       await writeFile(filePath, uint8Array);
       exportSuccess = true;
     } catch (e) {
-      exportError = e instanceof Error ? e.message : "Kunde inte spara PDF.";
+      exportError = userFacingErrorMessage(e, "Kunde inte spara PDF.");
     } finally {
       isExporting = false;
     }
@@ -86,7 +86,7 @@
       await deleteLottery(data.lotteryId);
       await goto("/");
     } catch (e) {
-      deleteError = e instanceof Error ? e.message : "Kunde inte ta bort lotteriet.";
+      deleteError = userFacingErrorMessage(e, "Kunde inte ta bort lotteriet.");
     } finally {
       isDeleting = false;
     }
@@ -102,7 +102,7 @@
       verification = await verifyLotteryDraw(data.lottery, data.participants, data.draws);
     } catch (e) {
       console.error("verify draw failed", e);
-      verifyError = messageFromTauriInvokeError(e);
+      verifyError = userFacingErrorMessage(e, "Kunde inte verifiera dragningen.");
     } finally {
       isVerifying = false;
     }

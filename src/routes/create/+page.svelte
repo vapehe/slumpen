@@ -7,6 +7,7 @@
   import { parseCSVFile } from "$lib/csv-parser";
   import { validateLotteryCreate } from "$lib/lottery-create-validation";
   import { generateSeed } from "$lib/random";
+  import { userFacingErrorMessage } from "$lib/tauri-error";
 
   let name = $state("");
   let description = $state("");
@@ -62,7 +63,7 @@
             : "CSV-filen innehåller inga datarader.";
       }
     } catch (e) {
-      error = e instanceof Error ? e.message : "Okänt fel vid filläsning.";
+      error = userFacingErrorMessage(e, "Okänt fel vid filläsning.");
     } finally {
       isLoading = false;
     }
@@ -126,7 +127,7 @@
 
       await goto(`/draw/${lotteryId}`);
     } catch (e) {
-      error = e instanceof Error ? e.message : "Okänt fel vid skapande av lotteri.";
+      error = userFacingErrorMessage(e, "Okänt fel vid skapande av lotteri.");
     } finally {
       isLoading = false;
     }

@@ -8,6 +8,7 @@
   import FrequencyChart from "$lib/randomness/components/FrequencyChart.svelte";
   import TestRunner from "$lib/randomness/components/TestRunner.svelte";
   import TestHistory from "$lib/randomness/components/TestHistory.svelte";
+  import { userFacingErrorMessage } from "$lib/tauri-error";
 
   let report = $state<RandomnessReport | null>(null);
   /** Nyckel så FrequencyChart monteras om vid varje körning (Chart.js + Svelte use:). */
@@ -42,7 +43,7 @@
       await saveReport(r, "synthetic", 1, args.numOutcomes, `seed=${seed}`);
       await loadHistory();
     } catch (e) {
-      error = e instanceof Error ? e.message : "Kunde inte köra testet.";
+      error = userFacingErrorMessage(e, "Kunde inte köra testet.");
     } finally {
       loading = false;
     }

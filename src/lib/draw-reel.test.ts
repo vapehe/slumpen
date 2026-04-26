@@ -48,7 +48,7 @@ describe("buildReelItems", () => {
     ]);
   });
 
-  it("keeps order of input participants", () => {
+  it("sorts by display name using sv-SE collation", () => {
     const items = buildReelItems(
       [
         makeParticipant(3, { name: "C" }),
@@ -57,7 +57,20 @@ describe("buildReelItems", () => {
       ],
       "name",
     );
-    expect(items.map((i) => i.id)).toEqual([3, 1, 2]);
+    expect(items.map((i) => i.id)).toEqual([1, 2, 3]);
+  });
+
+  it("sorts å, ä, ö after z in Swedish order", () => {
+    const items = buildReelItems(
+      [
+        makeParticipant(4, { name: "ö" }),
+        makeParticipant(1, { name: "a" }),
+        makeParticipant(3, { name: "å" }),
+        makeParticipant(2, { name: "z" }),
+      ],
+      "name",
+    );
+    expect(items.map((i) => i.name)).toEqual(["a", "z", "å", "ö"]);
   });
 });
 
