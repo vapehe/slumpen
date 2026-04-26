@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { formatDateTimeSv } from "$lib/format-swedish-time";
   import type { RandomnessTestRow } from "../storage";
 
   let { rows }: { rows: RandomnessTestRow[] } = $props();
@@ -27,7 +28,7 @@
           {#each rows as r (r.id)}
             <tr class="border-t border-neutral-100">
               <td class="px-4 py-2">
-                {new Date(r.created_at).toLocaleString("sv-SE", { dateStyle: "medium", timeStyle: "short" })}
+                {formatDateTimeSv(r.created_at, { dateStyle: "medium", timeStyle: "short" })}
               </td>
               <td class="px-4 py-2">{r.source === "synthetic" ? "Syntetisk" : "Historik"}</td>
               <td class="px-4 py-2">{r.sample_size.toLocaleString("sv-SE")}</td>

@@ -91,4 +91,26 @@ describe("computeLotteryDrawRows", () => {
     expect(rows.every((r) => [100, 200].includes(r.participantId))).toBe(true);
     expect(drawWinnersMock).toHaveBeenCalledWith([100, 200], 5, true, lottery.seed);
   });
+
+  /** Regression: drag-UI använder precomputed.length som totalDraws; måste alltid matcha num_draws. */
+  it("returns exactly num_draws rows for larger draws (15)", async () => {
+    const lottery = makeLottery({
+      seed: "012345670102030405060708090a0b0c",
+      num_draws: 15,
+      with_replacement: false,
+    });
+    const participants = Array.from({ length: 20 }, (_, i) => makeParticipant(i + 1));
+    const winnerIds = Array.from({ length: 15 }, (_, i) => i + 1);
+    drawWinnersMock.mockResolvedValueOnce(winnerIds);
+    const rows = await computeLotteryDrawRows(lottery, participants);
+    expect(rows).toHaveLength(15);
+    expect(rows[0].position).toBe(1);
+    expect(rows[14].position).toBe(15);
+    expect(drawWinnersMock).toHaveBeenCalledWith(
+      participants.map((p) => p.id),
+      15,
+      false,
+      lottery.seed,
+    );
+  });
 });

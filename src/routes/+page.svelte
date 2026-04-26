@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { ask } from "@tauri-apps/plugin-dialog";
   import { deleteLottery, getAllLotteries, type Lottery } from "$lib/db";
+  import { formatDateSv } from "$lib/format-swedish-time";
 
   let lotteries = $state<Lottery[]>([]);
   let isLoading = $state(true);
@@ -103,9 +104,7 @@
                 {/if}
                 <div class="flex flex-wrap gap-x-6 gap-y-1 text-sm text-neutral-500">
                   <span>
-                    Skapat {new Date(lottery.created_at).toLocaleDateString("sv-SE", {
-                      dateStyle: "medium",
-                    })}
+                    Skapat {formatDateSv(lottery.created_at)}
                   </span>
                   <span>
                     {lottery.num_draws === 1 ? "1 vinnare" : `${lottery.num_draws} vinnare`}

@@ -2,6 +2,7 @@ import autoTable from "jspdf-autotable";
 import { jsPDF } from "jspdf";
 
 import type { Draw, Lottery, Participant, ProtocolSignatoryContact } from "./db";
+import { formatDateTimeSv } from "./format-swedish-time";
 import { participantDisplayName } from "./draw-reel";
 import { buildParticipantTableRows, getParticipantCsvColumnOrder } from "./participant-table-for-pdf";
 
@@ -77,7 +78,7 @@ export async function generateLotteryProtocol(
     yPos += 10;
   }
 
-  doc.text(`Datum: ${new Date(lottery.created_at).toLocaleString("sv-SE")}`, 20, yPos);
+  doc.text(`Datum: ${formatDateTimeSv(lottery.created_at)}`, 20, yPos);
   yPos += 7;
 
   doc.text(`Antal deltagare: ${participants.length}`, 20, yPos);

@@ -5,6 +5,9 @@
   import { participantDisplayName } from "$lib/draw-reel";
   import { deleteLottery, type Draw, type Participant } from "$lib/db";
   import { generateLotteryProtocol } from "$lib/pdf-generator";
+  import { messageFromTauriInvokeError } from "$lib/tauri-error";
+  import { formatDateTimeSv } from "$lib/format-swedish-time";
+  import { verifyLotteryDraw, type VerificationResult } from "$lib/verify-lottery-draw";
   import type { PageProps } from "./$types";
 
   let { data }: PageProps = $props();
@@ -14,6 +17,9 @@
   let exportSuccess = $state(false);
   let isDeleting = $state(false);
   let deleteError = $state<string | null>(null);
+  let isVerifying = $state(false);
+  let verification = $state<VerificationResult | null>(null);
+  let verifyError = $state<string | null>(null);
 
   let winnersList = $derived(
     !data.ok
@@ -85,6 +91,27 @@
       isDeleting = false;
     }
   }
+
+  async function handleVerifyDraw(): Promise<void> {
+    if (!data.ok || isVerifying) return;
+
+    isVerifying = true;
+    verifyError = null;
+    verification = null;
+    try {
+      verification = await verifyLotteryDraw(data.lottery, data.participants, data.draws);
+    } catch (e) {
+      console.error("verify draw failed", e);
+      verifyError = messageFromTauriInvokeError(e);
+    } finally {
+      isVerifying = false;
+    }
+  }
+
+  function actualIdLabel(actualId: number): string {
+    if (actualId === -1) return "saknas";
+    return String(actualId);
+  }
 </script>
 
 <div class="mx-auto max-w-4xl px-6 py-10">
@@ -112,7 +139,7 @@
     <div class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
       <p class="font-semibold">Lotteriet är genomfört i databasen.</p>
       <p class="mt-1 text-neutral-700">
-        Skapat: {new Date(data.lottery.created_at).toLocaleString("sv-SE")}
+        Skapat: {formatDateTimeSv(data.lottery.created_at)}
       </p>
     </div>
 
@@ -150,7 +177,7 @@
           <li class="font-medium text-neutral-800">
             <span class="mr-2">{winner.name}</span>
             <span class="block text-xs font-normal text-neutral-500 sm:inline sm:text-sm">
-              Dragen {new Date(winner.drawnAt).toLocaleString("sv-SE")}
+              Dragen {formatDateTimeSv(winner.drawnAt)}
             </span>
           </li>
         {/each}
@@ -206,9 +233,79 @@
         <span class="text-neutral-600">Seed:</span>
         <span class="font-mono text-xs">{data.lottery.seed ?? "—"}</span>
       </p>
-      <p class="mt-2 text-xs text-neutral-600">
-        Med samma seed och samma indata kan dragningen reproduceras för verifiering.
+      <p class="mt-3 text-xs text-neutral-600">
+        Klicka på <span class="font-semibold text-neutral-800">Verifiera dragning</span> för att köra om dragningen med
+        samma seed och deltagare och bekräfta att utfallet är identiskt med det som sparats i databasen.
       </p>
+
+      <div class="mt-4">
+        <button
+          type="button"
+          onclick={() => void handleVerifyDraw()}
+          disabled={isVerifying || data.draws.length === 0 || data.lottery.seed == null || data.lottery.seed === ""}
+          class="rounded-lg border border-neutral-300 bg-white px-4 py-2 font-semibold text-neutral-800 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isVerifying ? "Verifierar…" : "Verifiera dragning"}
+        </button>
+      </div>
+
+      {#if verifyError}
+        <div class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
+          {verifyError}
+        </div>
+      {/if}
+
+      {#if verification != null}
+        {#if verification.ok}
+          <div
+            class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+            role="status"
+            aria-live="polite"
+          >
+            <p class="font-semibold">Verifiering lyckades</p>
+            <p class="mt-1">
+              Dragningen reproducerades med samma seed och deltagare. Alla {verification.expected.length} vinnare
+              stämmer med det sparade resultatet.
+            </p>
+          </div>
+        {:else if "reason" in verification}
+          <div
+            class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+            role="status"
+            aria-live="polite"
+          >
+            {#if verification.reason === "no_seed"}
+              <p class="font-semibold">Kan inte verifiera</p>
+              <p class="mt-1">Lotteriet saknar seed och kan inte verifieras.</p>
+            {:else if verification.reason === "no_draws"}
+              <p class="font-semibold">Kan inte verifiera</p>
+              <p class="mt-1">Inga sparade dragningar att jämföra mot.</p>
+            {:else}
+              <p class="font-semibold">Antal dragningar stämmer inte</p>
+              <p class="mt-1">
+                Antalet sparade dragningar matchar inte vad som beräknas utifrån lotteriets inställningar (antal
+                vinnare).
+              </p>
+            {/if}
+          </div>
+        {:else}
+          <div
+            class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+            role="status"
+            aria-live="polite"
+          >
+            <p class="font-semibold">Verifiering misslyckades</p>
+            <p class="mt-1">Omberäknat resultat skiljer sig från det sparade på följande positioner:</p>
+            <ul class="mt-2 list-inside list-disc space-y-1 font-mono text-xs">
+              {#each verification.mismatches as m (m.position)}
+                <li>
+                  Position {m.position}: förväntat deltagar-id {m.expectedId}, faktiskt {actualIdLabel(m.actualId)}
+                </li>
+              {/each}
+            </ul>
+          </div>
+        {/if}
+      {/if}
     </div>
   {/if}
 </div>

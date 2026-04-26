@@ -1,11 +1,12 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import SlotReel from "$lib/components/SlotReel.svelte";
-  import { saveDraws, type Participant } from "$lib/db";
+  import { getDrawsByLottery, saveDraws, type Participant } from "$lib/db";
   import { buildReelItems, participantDisplayName, reelForSpin, type ReelItem } from "$lib/draw-reel";
   import { computeLotteryDrawRows, type DrawRow } from "$lib/execute-lottery-draw";
   import { messageFromTauriInvokeError } from "$lib/tauri-error";
   import { isFullscreen as readFullscreen, setFullscreen } from "$lib/fullscreen";
+  import { awaitWithTimeout } from "$lib/await-with-timeout";
   import { closeAudio, playFanfare, playTick } from "$lib/sounds";
   import confetti from "canvas-confetti";
   import { onDestroy, onMount, tick } from "svelte";
@@ -19,6 +20,8 @@
   let soundsEnabled = $state(true);
   let isSpinning = $state(false);
   let isReelAnimating = $state(false);
+  /** Under INSERT till draws-tabellen (efter att rullen stannat). */
+  let isSavingDraw = $state(false);
   let actionError = $state<string | null>(null);
 
   /** Antal vinnare som redan är avslöjade (sparade i DB eller nyss dragna). */
@@ -42,6 +45,7 @@
   // mittmarkören i samma ögonblick som `revealedCount` inkrementeras).
   let reelItems = $state<ReelItem[]>([]);
   let reelWinnerId = $state<number>(0);
+  let isConfettiRunning = $state(false);
 
   onMount(() => {
     if (!data.ok) return;
@@ -131,7 +135,11 @@
     void playTick();
   }
 
+  /** Max tid att vänta på canvas-confetti innan UI släpps (undviker permanent lås om promisen aldrig resolve:ar). */
+  const CONFETTI_WAIT_TIMEOUT_MS = 15_000;
+
   async function fireConfetti(): Promise<void> {
+    isConfettiRunning = true;
     try {
       const p = confetti({
         particleCount: 180,
@@ -139,15 +147,17 @@
         startVelocity: 55,
         origin: { y: 0.5 },
       });
-      if (p) await p;
+      if (p) await awaitWithTimeout(p, CONFETTI_WAIT_TIMEOUT_MS);
     } catch (e) {
       console.warn("confetti failed", e);
+    } finally {
+      isConfettiRunning = false;
     }
   }
 
   async function startSpin(): Promise<void> {
-    if (!data.ok || isSpinning) return;
-    if (revealedCount >= precomputed.length) return;
+    if (!data.ok || isSpinning || drawCountMismatch || isConfettiRunning) return;
+    if (revealedCount >= totalDraws) return;
 
     const row = precomputed[revealedCount];
     reelItems = computeReelItems();
@@ -174,15 +184,16 @@
     isReelAnimating = false;
 
     const row = precomputed[revealedCount];
+    isSavingDraw = true;
     try {
       await saveDraws(data.lotteryId, [row]);
       revealedCount += 1;
-      const finalDrawComplete = revealedCount >= precomputed.length;
+      const finalDrawComplete = revealedCount >= totalDraws;
       if (finalDrawComplete) {
         isCompletingFinalDraw = true;
       }
       if (soundsEnabled) void playFanfare();
-      await fireConfetti();
+      void fireConfetti();
 
       if (finalDrawComplete) {
         isCompletingFinalDraw = false;
@@ -190,8 +201,20 @@
       }
     } catch (e) {
       isCompletingFinalDraw = false;
-      actionError = messageFromTauriInvokeError(e);
+      const errMsg = messageFromTauriInvokeError(e);
+      actionError = errMsg;
+      try {
+        const persisted = await getDrawsByLottery(data.lotteryId);
+        revealedCount = persisted.length;
+        if (revealedCount >= totalDraws) {
+          actionError = null;
+        }
+      } catch (syncErr) {
+        console.error("Kunde inte synka dragningar efter fel vid sparning", syncErr);
+        actionError = `${errMsg} Dessutom gick det inte att läsa om sparade dragningar – ladda om sidan.`;
+      }
     } finally {
+      isSavingDraw = false;
       isSpinning = false;
     }
   }
@@ -201,9 +224,16 @@
     await goto(`/results/${data.lotteryId}`);
   }
 
-  let isComplete = $derived(data.ok && revealedCount >= data.lottery.num_draws);
+  /** Antal dragningar enligt beräknad vinnarlista (enda källan för gräns i UI). */
+  let totalDraws = $derived(precomputed.length);
+  let drawCountMismatch = $derived(
+    data.ok && totalDraws > 0 && totalDraws !== data.lottery.num_draws,
+  );
+  let isComplete = $derived(
+    data.ok && totalDraws > 0 && !drawCountMismatch && revealedCount >= totalDraws,
+  );
   let currentWinnerRow = $derived(
-    data.ok && revealedCount < precomputed.length ? precomputed[revealedCount] : null,
+    data.ok && !drawCountMismatch && revealedCount < totalDraws ? precomputed[revealedCount] : null,
   );
   let revealedRows = $derived(precomputed.slice(0, revealedCount));
 </script>
@@ -304,10 +334,19 @@
       <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
         Det finns inga deltagare för detta lotteri.
       </div>
+    {:else if drawCountMismatch}
+      <div class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+        <p class="font-semibold">Inkonsistent dragningskonfiguration</p>
+        <p class="mt-2">
+          Lotteriet är sparat med <span class="font-mono font-semibold">{data.lottery.num_draws}</span> vinnare, men den
+          reproducerbara dragningen ger <span class="font-mono font-semibold">{totalDraws}</span> steg. Dragning kan inte
+          fortsätta säkert. Kontrollera databasen eller skapa ett nytt lotteri.
+        </p>
+      </div>
     {:else if isComplete && !isCompletingFinalDraw && !showPostDrawCta}
       <!-- Alla vinnare dragna – statisk resultatvy. -->
       <div class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-        Alla {data.lottery.num_draws} vinnare är dragna och sparade.
+        Alla {totalDraws} vinnare är dragna och sparade.
       </div>
       <div class="mb-6">
         <h2 class="mb-3 text-lg font-semibold text-neutral-900">Resultat</h2>
@@ -332,13 +371,13 @@
       <!-- Aktiv dragning med animation -->
       {#if showPostDrawCta}
         <div class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-          Alla {data.lottery.num_draws} vinnare är dragna och sparade.
+          Alla {totalDraws} vinnare är dragna och sparade.
         </div>
       {:else}
         <div class="mb-4 flex items-baseline justify-between">
           <p class="text-sm font-medium text-neutral-700">
             Vinnare <span class="text-lg font-bold text-neutral-900">{revealedCount + 1}</span>
-            av <span class="font-semibold">{data.lottery.num_draws}</span>
+            av <span class="font-semibold">{totalDraws}</span>
           </p>
           <p class="text-xs text-neutral-500">
             {computeReelItems().length} möjliga utfall på rullen
@@ -378,18 +417,23 @@
               max="20000"
               step="500"
               bind:value={speedMs}
-              disabled={isSpinning}
+              disabled={isSpinning || isSavingDraw}
               class="flex-1"
             />
           </label>
 
-          <button
+            <button
             type="button"
             onclick={() => startSpin()}
-            disabled={isSpinning}
+            disabled={isSpinning || isSavingDraw || isConfettiRunning}
             class="rounded-xl bg-emerald-700 px-8 py-4 text-lg font-bold text-white shadow-md hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+              title={isConfettiRunning ? "Vänta tills konfetti är klar" : undefined}
           >
-            {#if isReelAnimating}
+            {#if isSavingDraw}
+              Sparar…
+            {:else if isConfettiRunning}
+              Konfetti…
+            {:else if isReelAnimating}
               Snurrar…
             {:else if revealedCount === 0}
               Starta dragning
