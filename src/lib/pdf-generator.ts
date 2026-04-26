@@ -10,6 +10,12 @@ type DocWithAutoTable = jsPDF & {
   lastAutoTable?: { finalY: number };
 };
 
+/** Utrymme längst ner för sidfot (mm); innehåll ska sluta ovanför detta band. */
+const FOOTER_STRIP_MM = 20;
+
+const FOOTER_SIGNATURE_HINT =
+  "Dragn.förrättare: ____  Vittne 1:____  Vittne 2: ____";
+
 /**
  * Ritar en lodrät signatursektion: rubrik, signaturstreck och valfria rader för
  * namn, e-post och mobil. Returnerar y för nästa sektion (med luft inkluderad).
@@ -104,6 +110,7 @@ export async function generateLotteryProtocol(
     startY: yPos,
     theme: "grid",
     headStyles: { fillColor: [66, 139, 202] },
+    margin: { bottom: FOOTER_STRIP_MM + 4 },
   });
 
   const afterTable = (doc as DocWithAutoTable).lastAutoTable?.finalY ?? yPos + 10;
@@ -119,35 +126,6 @@ export async function generateLotteryProtocol(
 
   yPos += 25;
 
-  const sig = lottery.protocol_signatories;
-  const sectionX = 20;
-  const sectionLineRight = 110;
-
-  yPos = drawSignatureSection(
-    doc,
-    "Dragningsförrättare",
-    sectionX,
-    sectionLineRight,
-    yPos,
-    sig?.drawingOfficial,
-  );
-  yPos = drawSignatureSection(
-    doc,
-    "Vittne 1",
-    sectionX,
-    sectionLineRight,
-    yPos,
-    sig?.witness1,
-  );
-  yPos = drawSignatureSection(
-    doc,
-    "Vittne 2",
-    sectionX,
-    sectionLineRight,
-    yPos,
-    sig?.witness2,
-  );
-
   const columns = getParticipantCsvColumnOrder(participants);
   if (columns.length > 0 && participants.length > 0) {
     doc.addPage();
@@ -161,19 +139,54 @@ export async function generateLotteryProtocol(
       theme: "grid",
       headStyles: { fillColor: [66, 139, 202], fontSize: 7 },
       styles: { fontSize: 7, cellPadding: 1.5, overflow: "linebreak" },
-      margin: { left: 14, right: 14 },
+      margin: { left: 14, right: 14, bottom: FOOTER_STRIP_MM + 6 },
     });
   }
 
-  // Sidnumrering (t.ex. 1/4) nere till höger på varje sida.
-  const totalPages = doc.getNumberOfPages();
-  const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  doc.setFontSize(9);
+  const contentBottomY = pageHeight - FOOTER_STRIP_MM;
+  let signatureY =
+    columns.length > 0 && participants.length > 0
+      ? ((doc as DocWithAutoTable).lastAutoTable?.finalY ?? 24) + 15
+      : yPos;
+
+  const minSignatureBlockMm = 90;
+  if (signatureY + minSignatureBlockMm > contentBottomY) {
+    doc.addPage();
+    signatureY = 20;
+  }
+
+  const sig = lottery.protocol_signatories;
+  const sectionX = 20;
+  const sectionLineRight = 110;
+
+  signatureY = drawSignatureSection(
+    doc,
+    "Dragningsförrättare",
+    sectionX,
+    sectionLineRight,
+    signatureY,
+    sig?.drawingOfficial,
+  );
+  signatureY = drawSignatureSection(
+    doc,
+    "Vittne 1",
+    sectionX,
+    sectionLineRight,
+    signatureY,
+    sig?.witness1,
+  );
+  drawSignatureSection(doc, "Vittne 2", sectionX, sectionLineRight, signatureY, sig?.witness2);
+
+  const totalPages = doc.getNumberOfPages();
   for (let page = 1; page <= totalPages; page++) {
     doc.setPage(page);
-    const label = `Sida ${page}/${totalPages}`;
-    doc.text(label, pageWidth - 14, pageHeight - 10, { align: "right" });
+    const ph = doc.internal.pageSize.getHeight();
+    const pw = doc.internal.pageSize.getWidth();
+    doc.setFontSize(8);
+    doc.text(FOOTER_SIGNATURE_HINT, 14, ph - 6);
+    doc.setFontSize(9);
+    doc.text(`Sida ${page}/${totalPages}`, pw - 14, ph - 12, { align: "right" });
   }
 
   return doc.output("blob");

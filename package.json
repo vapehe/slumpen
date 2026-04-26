@@ -12,7 +12,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "tauri:icon": "tauri icon src/lib/assets/logo.png -o src-tauri/icons"
   },
   "license": "MIT",
   "dependencies": {
