@@ -66,6 +66,12 @@ pub fn run() {
             sql: include_str!("../migrations/0002_randomness_tests.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 3,
+            description: "protocol_signatories_json",
+            sql: include_str!("../migrations/0003_protocol_signatories.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()

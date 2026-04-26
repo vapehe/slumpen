@@ -2,7 +2,7 @@
   import { goto } from "$app/navigation";
   import { open } from "@tauri-apps/plugin-dialog";
   import CSVPreview from "$lib/components/CSVPreview.svelte";
-  import { addParticipants, createLottery } from "$lib/db";
+  import { addParticipants, createLottery, type ProtocolSignatories } from "$lib/db";
   import type { ParsedCSV } from "$lib/csv-parser";
   import { parseCSVFile } from "$lib/csv-parser";
   import { validateLotteryCreate } from "$lib/lottery-create-validation";
@@ -16,6 +16,16 @@
   let parsedCSV = $state<ParsedCSV | null>(null);
   let isLoading = $state(false);
   let error = $state<string | null>(null);
+
+  let officialName = $state("");
+  let officialEmail = $state("");
+  let officialMobile = $state("");
+  let witness1Name = $state("");
+  let witness1Email = $state("");
+  let witness1Mobile = $state("");
+  let witness2Name = $state("");
+  let witness2Email = $state("");
+  let witness2Mobile = $state("");
 
   let rowCount = $derived(parsedCSV?.data.length ?? 0);
 
@@ -81,6 +91,23 @@
 
       const seed = await generateSeed();
       const desc = description.trim();
+      const protocolSignatories: ProtocolSignatories = {
+        drawingOfficial: {
+          name: officialName,
+          email: officialEmail,
+          mobile: officialMobile,
+        },
+        witness1: {
+          name: witness1Name,
+          email: witness1Email,
+          mobile: witness1Mobile,
+        },
+        witness2: {
+          name: witness2Name,
+          email: witness2Email,
+          mobile: witness2Mobile,
+        },
+      };
       const lotteryId = await createLottery(
         validation.displayName,
         desc === "" ? null : desc,
@@ -88,6 +115,7 @@
         withReplacement,
         selectedNameColumn,
         seed,
+        protocolSignatories,
       );
 
       const participants = parsedCSV.data.map((row, index) => ({
@@ -160,6 +188,117 @@
       <p class="mt-1 text-sm text-neutral-600">
         Om avmarkerad kan varje rad bara vinna en gång. Om ikryssad kan samma rad dras flera gånger.
       </p>
+    </div>
+
+    <div class="rounded-lg border border-neutral-200 bg-neutral-50/80 p-4 space-y-6">
+      <div>
+        <h2 class="text-lg font-semibold text-neutral-900">PDF-protokoll (valfritt)</h2>
+        <p class="mt-1 text-sm text-neutral-600">
+          Namn, e-post och mobil för dragningsförrättare och vittnen visas bredvid signaturraderna i den exporterade PDF:en. Alla fält kan lämnas tomma.
+        </p>
+      </div>
+
+      <fieldset class="space-y-3">
+        <legend class="text-sm font-semibold text-neutral-800">Dragningsförrättare</legend>
+        <div class="grid gap-3 sm:grid-cols-3">
+          <div>
+            <label class="mb-1 block text-sm text-neutral-700" for="official-name">Namn</label>
+            <input
+              id="official-name"
+              type="text"
+              bind:value={officialName}
+              autocomplete="name"
+              class="w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900 shadow-sm focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+            />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm text-neutral-700" for="official-email">E-post</label>
+            <input
+              id="official-email"
+              type="email"
+              bind:value={officialEmail}
+              autocomplete="email"
+              class="w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900 shadow-sm focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+            />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm text-neutral-700" for="official-mobile">Mobil</label>
+            <input
+              id="official-mobile"
+              type="tel"
+              bind:value={officialMobile}
+              autocomplete="tel"
+              class="w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900 shadow-sm focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+            />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="space-y-3">
+        <legend class="text-sm font-semibold text-neutral-800">Vittne 1</legend>
+        <div class="grid gap-3 sm:grid-cols-3">
+          <div>
+            <label class="mb-1 block text-sm text-neutral-700" for="w1-name">Namn</label>
+            <input
+              id="w1-name"
+              type="text"
+              bind:value={witness1Name}
+              class="w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900 shadow-sm focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+            />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm text-neutral-700" for="w1-email">E-post</label>
+            <input
+              id="w1-email"
+              type="email"
+              bind:value={witness1Email}
+              class="w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900 shadow-sm focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+            />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm text-neutral-700" for="w1-mobile">Mobil</label>
+            <input
+              id="w1-mobile"
+              type="tel"
+              bind:value={witness1Mobile}
+              class="w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900 shadow-sm focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+            />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="space-y-3">
+        <legend class="text-sm font-semibold text-neutral-800">Vittne 2</legend>
+        <div class="grid gap-3 sm:grid-cols-3">
+          <div>
+            <label class="mb-1 block text-sm text-neutral-700" for="w2-name">Namn</label>
+            <input
+              id="w2-name"
+              type="text"
+              bind:value={witness2Name}
+              class="w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900 shadow-sm focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+            />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm text-neutral-700" for="w2-email">E-post</label>
+            <input
+              id="w2-email"
+              type="email"
+              bind:value={witness2Email}
+              class="w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900 shadow-sm focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+            />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm text-neutral-700" for="w2-mobile">Mobil</label>
+            <input
+              id="w2-mobile"
+              type="tel"
+              bind:value={witness2Mobile}
+              class="w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900 shadow-sm focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+            />
+          </div>
+        </div>
+      </fieldset>
     </div>
 
     <div>

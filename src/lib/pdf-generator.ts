@@ -1,8 +1,63 @@
 import autoTable from "jspdf-autotable";
 import { jsPDF } from "jspdf";
 
-import type { Draw, Lottery, Participant } from "./db";
+import type { Draw, Lottery, Participant, ProtocolSignatoryContact } from "./db";
 import { participantDisplayName } from "./draw-reel";
+import { buildParticipantTableRows, getParticipantCsvColumnOrder } from "./participant-table-for-pdf";
+
+type DocWithAutoTable = jsPDF & {
+  lastAutoTable?: { finalY: number };
+};
+
+/**
+ * Ritar en lodrät signatursektion: rubrik, signaturstreck och valfria rader för
+ * namn, e-post och mobil. Returnerar y för nästa sektion (med luft inkluderad).
+ */
+function drawSignatureSection(
+  doc: jsPDF,
+  label: string,
+  x: number,
+  lineRight: number,
+  startY: number,
+  contact: ProtocolSignatoryContact | undefined,
+): number {
+  doc.setFontSize(11);
+  doc.text(label, x, startY);
+
+  // Lite extra luft mellan rubrik och signaturlinje för handskrift.
+  const lineY = startY + 10;
+  doc.line(x, lineY, lineRight, lineY);
+
+  let y = lineY + 5;
+  doc.setFontSize(10);
+  const maxWidth = lineRight - x;
+
+  const name = contact?.name?.trim();
+  if (name != null && name !== "") {
+    for (const fragment of doc.splitTextToSize(name, maxWidth)) {
+      doc.text(fragment, x, y);
+      y += 5;
+    }
+  }
+
+  const email = contact?.email?.trim();
+  if (email != null && email !== "") {
+    for (const fragment of doc.splitTextToSize(`Email: ${email}`, maxWidth)) {
+      doc.text(fragment, x, y);
+      y += 5;
+    }
+  }
+
+  const mobile = contact?.mobile?.trim();
+  if (mobile != null && mobile !== "") {
+    for (const fragment of doc.splitTextToSize(`Mobil: ${mobile}`, maxWidth)) {
+      doc.text(fragment, x, y);
+      y += 5;
+    }
+  }
+
+  return y + 6;
+}
 
 export async function generateLotteryProtocol(
   lottery: Lottery,
@@ -50,9 +105,6 @@ export async function generateLotteryProtocol(
     headStyles: { fillColor: [66, 139, 202] },
   });
 
-  type DocWithAutoTable = typeof doc & {
-    lastAutoTable?: { finalY: number };
-  };
   const afterTable = (doc as DocWithAutoTable).lastAutoTable?.finalY ?? yPos + 10;
   yPos = afterTable + 15;
 
@@ -65,27 +117,63 @@ export async function generateLotteryProtocol(
   doc.text("(Seeden gör att dragningen kan verifieras och reproduceras.)", 20, yPos + 5);
 
   yPos += 25;
-  doc.setFontSize(11);
 
-  const signatureStartY = yPos;
-  const signatureSpacing = 25;
+  const sig = lottery.protocol_signatories;
+  const sectionX = 20;
+  const sectionLineRight = 110;
 
-  doc.text("Dragningsförrättare:", 20, signatureStartY);
-  doc.line(20, signatureStartY + 8, 90, signatureStartY + 8);
+  yPos = drawSignatureSection(
+    doc,
+    "Dragningsförrättare",
+    sectionX,
+    sectionLineRight,
+    yPos,
+    sig?.drawingOfficial,
+  );
+  yPos = drawSignatureSection(
+    doc,
+    "Vittne 1",
+    sectionX,
+    sectionLineRight,
+    yPos,
+    sig?.witness1,
+  );
+  yPos = drawSignatureSection(
+    doc,
+    "Vittne 2",
+    sectionX,
+    sectionLineRight,
+    yPos,
+    sig?.witness2,
+  );
+
+  const columns = getParticipantCsvColumnOrder(participants);
+  if (columns.length > 0 && participants.length > 0) {
+    doc.addPage();
+    doc.setFontSize(14);
+    doc.text("Deltagare (alla kolumner från import)", 20, 18);
+    const body = buildParticipantTableRows(participants, columns);
+    autoTable(doc, {
+      head: [columns],
+      body,
+      startY: 24,
+      theme: "grid",
+      headStyles: { fillColor: [66, 139, 202], fontSize: 7 },
+      styles: { fontSize: 7, cellPadding: 1.5, overflow: "linebreak" },
+      margin: { left: 14, right: 14 },
+    });
+  }
+
+  // Sidnumrering (t.ex. 1/4) nere till höger på varje sida.
+  const totalPages = doc.getNumberOfPages();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
   doc.setFontSize(9);
-  doc.text("Namnförtydligande", 20, signatureStartY + 12);
-
-  doc.setFontSize(11);
-  doc.text("Vittne 1:", 110, signatureStartY);
-  doc.line(110, signatureStartY + 8, 180, signatureStartY + 8);
-  doc.setFontSize(9);
-  doc.text("Namnförtydligande", 110, signatureStartY + 12);
-
-  doc.setFontSize(11);
-  doc.text("Vittne 2:", 20, signatureStartY + signatureSpacing);
-  doc.line(20, signatureStartY + signatureSpacing + 8, 90, signatureStartY + signatureSpacing + 8);
-  doc.setFontSize(9);
-  doc.text("Namnförtydligande", 20, signatureStartY + signatureSpacing + 12);
+  for (let page = 1; page <= totalPages; page++) {
+    doc.setPage(page);
+    const label = `Sida ${page}/${totalPages}`;
+    doc.text(label, pageWidth - 14, pageHeight - 10, { align: "right" });
+  }
 
   return doc.output("blob");
 }

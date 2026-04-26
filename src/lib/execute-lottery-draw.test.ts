@@ -16,6 +16,7 @@ function makeLottery(over: Partial<Lottery> & Pick<Lottery, "with_replacement" |
     description: null,
     created_at: "",
     name_column: "name",
+    protocol_signatories: null,
     ...over,
   };
 }

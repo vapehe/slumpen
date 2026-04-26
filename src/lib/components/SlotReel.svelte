@@ -8,10 +8,12 @@
     /** Total spinntid i millisekunder. */
     speed: number;
     onComplete?: () => void;
+    /** När snurr aldrig startar (tom rulle, vinnare matchar ej items, el.) — så att UI inte låser sig i “snurran”. */
+    onAborted?: () => void;
     onTick?: () => void;
   }
 
-  let { items, winnerId, speed, onComplete, onTick }: Props = $props();
+  let { items, winnerId, speed, onComplete, onAborted, onTick }: Props = $props();
 
   const ITEM_HEIGHT = 80;
   const VIEWPORT_ITEMS = 5;
@@ -37,11 +39,24 @@
     return 1 - Math.pow(1 - t, DECELERATION_POWER);
   }
 
+  function abort(): void {
+    onAborted?.();
+  }
+
   export function spin(): void {
-    if (spinning || !reelEl || items.length === 0) return;
+    if (spinning) return;
+    if (!reelEl) {
+      abort();
+      return;
+    }
+    if (items.length === 0) {
+      abort();
+      return;
+    }
     const winnerIndex = items.findIndex((i) => i.id === winnerId);
     if (winnerIndex < 0) {
-      console.error("SlotReel: winnerId not present in items", { winnerId });
+      console.error("SlotReel: winnerId not present in items", { winnerId, itemIds: items.map((i) => i.id) });
+      abort();
       return;
     }
 

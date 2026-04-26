@@ -9,6 +9,19 @@ export async function getDb(): Promise<Database> {
   return db;
 }
 
+/** Valfria kontaktuppgifter för en signatär (PDF-protokoll). */
+export interface ProtocolSignatoryContact {
+  name?: string;
+  email?: string;
+  mobile?: string;
+}
+
+export interface ProtocolSignatories {
+  drawingOfficial?: ProtocolSignatoryContact;
+  witness1?: ProtocolSignatoryContact;
+  witness2?: ProtocolSignatoryContact;
+}
+
 export interface Lottery {
   id: number;
   name: string;
@@ -18,6 +31,7 @@ export interface Lottery {
   with_replacement: boolean;
   name_column: string;
   seed: string | null;
+  protocol_signatories: ProtocolSignatories | null;
 }
 
 export interface Participant {
@@ -50,14 +64,87 @@ type LotteryRow = {
   with_replacement: number | boolean;
   name_column: string;
   seed: string | null;
+  protocol_signatories_json?: string | null;
 };
+
+function parseProtocolSignatoriesJson(raw: string | null | undefined): ProtocolSignatories | null {
+  if (raw == null || raw.trim() === "") {
+    return null;
+  }
+  try {
+    const v = JSON.parse(raw) as unknown;
+    if (v == null || typeof v !== "object" || Array.isArray(v)) {
+      return null;
+    }
+    return v as ProtocolSignatories;
+  } catch {
+    return null;
+  }
+}
 
 function rowToLottery(row: LotteryRow): Lottery {
   const wr = row.with_replacement;
+  const { protocol_signatories_json, ...rest } = row;
   return {
-    ...row,
+    ...rest,
     with_replacement: wr === true || wr === 1,
+    protocol_signatories: parseProtocolSignatoriesJson(protocol_signatories_json),
   };
+}
+
+function trimContactField(s: string | undefined): string | undefined {
+  const t = s?.trim();
+  return t === "" || t == null ? undefined : t;
+}
+
+function normalizeSignatory(
+  input: ProtocolSignatoryContact | undefined,
+): ProtocolSignatoryContact | undefined {
+  if (input == null) {
+    return undefined;
+  }
+  const name = trimContactField(input.name);
+  const email = trimContactField(input.email);
+  const mobile = trimContactField(input.mobile);
+  if (name == null && email == null && mobile == null) {
+    return undefined;
+  }
+  const out: ProtocolSignatoryContact = {};
+  if (name != null) {
+    out.name = name;
+  }
+  if (email != null) {
+    out.email = email;
+  }
+  if (mobile != null) {
+    out.mobile = mobile;
+  }
+  return out;
+}
+
+/** Returnerar JSON-sträng för DB, eller null om inget att spara. */
+export function protocolSignatoriesToJson(signatories: ProtocolSignatories): string | null {
+  const drawingOfficial = normalizeSignatory(signatories.drawingOfficial);
+  const witness1 = normalizeSignatory(signatories.witness1);
+  const witness2 = normalizeSignatory(signatories.witness2);
+  const payload: ProtocolSignatories = {};
+  if (drawingOfficial != null) {
+    payload.drawingOfficial = drawingOfficial;
+  }
+  if (witness1 != null) {
+    payload.witness1 = witness1;
+  }
+  if (witness2 != null) {
+    payload.witness2 = witness2;
+  }
+  if (
+    payload.drawingOfficial == null &&
+    payload.witness1 == null &&
+    payload.witness2 == null
+  ) {
+    return null;
+  }
+  return JSON.stringify(payload);
 }
 
 export async function createLottery(
@@ -67,12 +154,22 @@ export async function createLottery(
   withReplacement: boolean,
   nameColumn: string,
   seed: string,
+  protocolSignatories: ProtocolSignatories = {},
 ): Promise<number> {
   const database = await getDb();
+  const protocolJson = protocolSignatoriesToJson(protocolSignatories);
   const result = await database.execute(
-    `INSERT INTO lotteries (name, description, num_draws, with_replacement, name_column, seed)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [name, description, numDraws, withReplacement ? 1 : 0, nameColumn, seed],
+    `INSERT INTO lotteries (name, description, num_draws, with_replacement, name_column, seed, protocol_signatories_json)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [
+      name,
+      description,
+      numDraws,
+      withReplacement ? 1 : 0,
+      nameColumn,
+      seed,
+      protocolJson,
+    ],
   );
   if (result.lastInsertId != null) {
     return result.lastInsertId;

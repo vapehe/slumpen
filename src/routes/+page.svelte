@@ -48,22 +48,19 @@
 </script>
 
 <div class="mx-auto max-w-5xl px-6 py-10">
-  <div class="mb-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-    <h1 class="text-4xl font-bold tracking-tight text-neutral-900">Slumpen</h1>
-    <div class="flex flex-wrap gap-3">
-      <a
-        href="/randomness"
-        class="inline-flex justify-center rounded-lg border border-neutral-300 bg-white px-4 py-3 font-semibold text-neutral-800 hover:bg-neutral-50"
-      >
-        Testa slumpmässighet
-      </a>
-      <a
-        href="/create"
-        class="inline-flex justify-center rounded-lg bg-emerald-600 px-6 py-3 font-semibold text-white hover:bg-emerald-700"
-      >
-        Skapa nytt lotteri
-      </a>
-    </div>
+  <div class="mb-10 flex flex-wrap justify-end gap-3">
+    <a
+      href="/randomness"
+      class="inline-flex justify-center rounded-lg border border-neutral-300 bg-white px-4 py-3 font-semibold text-neutral-800 hover:bg-neutral-50"
+    >
+      Testa slumpmässighet
+    </a>
+    <a
+      href="/create"
+      class="inline-flex justify-center rounded-lg bg-emerald-600 px-6 py-3 font-semibold text-white hover:bg-emerald-700"
+    >
+      Skapa nytt lotteri
+    </a>
   </div>
 
   {#if isLoading}

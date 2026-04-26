@@ -8,7 +8,7 @@
   import { isFullscreen as readFullscreen, setFullscreen } from "$lib/fullscreen";
   import { closeAudio, playFanfare, playTick } from "$lib/sounds";
   import confetti from "canvas-confetti";
-  import { onDestroy, onMount } from "svelte";
+  import { onDestroy, onMount, tick } from "svelte";
   import type { PageProps } from "./$types";
 
   let { data }: PageProps = $props();
@@ -121,6 +121,11 @@
     return reelForSpin(allItems, revealedIds, data.lottery.with_replacement);
   }
 
+  function handleSlotAborted(): void {
+    isSpinning = false;
+    isReelAnimating = false;
+  }
+
   function handleTick(): void {
     if (!soundsEnabled) return;
     void playTick();
@@ -147,6 +152,12 @@
     const row = precomputed[revealedCount];
     reelItems = computeReelItems();
     reelWinnerId = row.participantId;
+    await tick();
+
+    if (computeReelItems().length === 0) {
+      actionError = "Rullen har inga deltagare kvar. Kontrollera att antal vinnare inte överstiger unika deltagare (utan återläggning).";
+      return;
+    }
 
     actionError = null;
     isSpinning = true;
@@ -155,7 +166,11 @@
   }
 
   async function handleDrawComplete(): Promise<void> {
-    if (!data.ok) return;
+    if (!data.ok) {
+      isSpinning = false;
+      isReelAnimating = false;
+      return;
+    }
     isReelAnimating = false;
 
     const row = precomputed[revealedCount];
@@ -337,6 +352,7 @@
         winnerId={reelWinnerId}
         speed={speedMs}
         onTick={handleTick}
+        onAborted={handleSlotAborted}
         onComplete={handleDrawComplete}
       />
 
