@@ -2,6 +2,32 @@
 
 Run these on a machine with `git` and `gh` authenticated to [vapehe/slumpen](https://github.com/vapehe/slumpen).
 
+## 0. Install and log in to GitHub CLI (`gh`)
+
+If `gh release create` fails with **command not found**, install `gh` first.
+
+**Ubuntu / Debian (APT):**
+
+```bash
+sudo apt update
+sudo apt install -y gh
+gh --version
+```
+
+Other distros and newer packages: [Installing gh on Linux](https://github.com/cli/cli/blob/trunk/docs/install_linux.md).
+
+Then authenticate once (browser or token flow):
+
+```bash
+gh auth login
+```
+
+Confirm you can reach the repo:
+
+```bash
+gh repo view vapehe/slumpen
+```
+
 ## 1. Push commit and tag
 
 From the repo root (after `chore: bump version to 1.0.0` is committed and tag `v1.0.0` exists):
