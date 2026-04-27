@@ -17,30 +17,10 @@ Skrivbordsapp för **transparenta, granskningsbara lotteridragningar** – till 
 
 ## Skärmdumpar
 
-<img
-  src="docs/screenshots/slumpen_1.png"
-  alt="Startsida"
-  width="600"
-  style="border: 1px solid #d0d7de; border-radius: 8px; padding: 8px; background: #f6f8fa;"
-/>
-<img
-  src="docs/screenshots/slumpen_2.png"
-  alt="Skapa lotteri"
-  width="600"
-  style="border: 1px solid #d0d7de; border-radius: 8px; padding: 8px; background: #f6f8fa;"
-/>
-<img
-  src="docs/screenshots/slumpen_3.png"
-  alt="Välj csv-fil"
-  width="600"
-  style="border: 1px solid #d0d7de; border-radius: 8px; padding: 8px; background: #f6f8fa;"
-/>
-<img
-  src="docs/screenshots/slumpen_4.png"
-  alt="Dragning"
-  width="600"
-  style="border: 1px solid #d0d7de; border-radius: 8px; padding: 8px; background: #f6f8fa;"
-/>
+<img src="docs/screenshots/slumpen_1.png" alt="Startsida" width="600" />
+<img src="docs/screenshots/slumpen_2.png" alt="Skapa lotteri" width="600" />
+<img src="docs/screenshots/slumpen_3.png" alt="csv" width="600" />
+<img src="docs/screenshots/slumpen_4.png" alt="dragning" width="600" />
 
 ## Snabbstart
 
