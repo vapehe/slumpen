@@ -17,15 +17,10 @@ Skrivbordsapp för **transparenta, granskningsbara lotteridragningar** – till 
 
 ## Skärmdumpar
 
-Inga skärmdumpar i repot än. Lägg gärna till bilder här när du har dem, t.ex.:
-
-```markdown
 <img src="docs/screenshots/slumpen_1.png" alt="Huvudvy" width="600" />
-
-
-```
-
-Skapa mappen `docs/screenshots/` om du vill versionera bilderna i Git.
+<img src="docs/screenshots/slumpen_2.png" alt="Huvudvy" width="600" />
+<img src="docs/screenshots/slumpen_3.png" alt="Huvudvy" width="600" />
+<img src="docs/screenshots/slumpen_4.png" alt="Huvudvy" width="600" />
 
 ## Snabbstart
 
