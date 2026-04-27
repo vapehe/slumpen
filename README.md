@@ -20,10 +20,8 @@ Skrivbordsapp för **transparenta, granskningsbara lotteridragningar** – till 
 Inga skärmdumpar i repot än. Lägg gärna till bilder här när du har dem, t.ex.:
 
 ```markdown
-![Startsida](docs/screenshots/slumpen_1.png)
-![Startsida](docs/screenshots/slumpen_2.png)
-![Startsida](docs/screenshots/slumpen_3.png)
-![Startsida](docs/screenshots/slumpen_4.png)
+<img src="docs/screenshots/slumpen_1.png" alt="Huvudvy" width="600" />
+
 
 ```
 
